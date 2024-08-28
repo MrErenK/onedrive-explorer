@@ -30,16 +30,21 @@ export const authOptions: NextAuthOptions = {
         const expiresAt = token.expiresAt as number;
         if (Date.now() > expiresAt * 1000) {
           try {
-            const response = await fetch(`https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID}/oauth2/v2.0/token`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-              body: new URLSearchParams({
-                client_id: process.env.AZURE_AD_CLIENT_ID!,
-                client_secret: process.env.AZURE_AD_CLIENT_SECRET!,
-                grant_type: 'refresh_token',
-                refresh_token: token.refreshToken as string,
-              }),
-            });
+            const response = await fetch(
+              `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID}/oauth2/v2.0/token`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: new URLSearchParams({
+                  client_id: process.env.AZURE_AD_CLIENT_ID!,
+                  client_secret: process.env.AZURE_AD_CLIENT_SECRET!,
+                  grant_type: "refresh_token",
+                  refresh_token: token.refreshToken as string,
+                }),
+              },
+            );
 
             const refreshedTokens = await response.json();
 
@@ -49,10 +54,12 @@ export const authOptions: NextAuthOptions = {
               ...token,
               accessToken: refreshedTokens.access_token,
               refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
-              expiresAt: Math.floor(Date.now() / 1000 + refreshedTokens.expires_in),
+              expiresAt: Math.floor(
+                Date.now() / 1000 + refreshedTokens.expires_in,
+              ),
             };
           } catch (error) {
-            console.error('Error refreshing access token', error);
+            console.error("Error refreshing access token", error);
             return { ...token, error: "RefreshAccessTokenError" };
           }
         }

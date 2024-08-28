@@ -121,9 +121,7 @@ const NavBar: React.FC = () => {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <button
-                    className="flex items-center space-x-2 px-3 py-2 rounded-md transition-colors hover:bg-primary-light/10 dark:hover:bg-primary-dark/10 text-text-light dark:text-text-dark hover:text-primary-light dark:hover:text-primary-dark"
-                  >
+                  <button className="flex items-center space-x-2 px-3 py-2 rounded-md transition-colors hover:bg-primary-light/10 dark:hover:bg-primary-dark/10 text-text-light dark:text-text-dark hover:text-primary-light dark:hover:text-primary-dark">
                     <UserIcon className="w-5 h-5 flex-shrink-0" />
                     <span>Logged in as {session?.user?.name}</span>
                   </button>
