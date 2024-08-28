@@ -132,29 +132,25 @@ export const DriveItemList: React.FC<DriveItemListProps> = ({
                         <div>
                           <span className="font-medium">{item.name}</span>
                           <p className="text-xs text-secondary-light dark:text-secondary-dark mt-1">
-                            {item.folder
-                              ? `${item.folder.childCount ?? 0} item${(item.folder.childCount ?? 0) !== 1 ? "s" : ""}`
-                              : formatFileSize(item.size)}
+                            {getFileExtension(item.name)}
                           </p>
                         </div>
                       </div>
                     </td>
                     <td className="p-3 text-secondary-light dark:text-secondary-dark hidden sm:table-cell">
-                      <div>{formatDate(item.lastModifiedDateTime)}</div>
                       <div className="text-xs mt-1">
                         {formatDate(item.lastModifiedDateTime)}
                       </div>
                     </td>
                     <td className="p-3 text-secondary-light dark:text-secondary-dark hidden sm:table-cell">
                       {item.folder ? (
-                        <div className="text-xs">Folder</div>
+                        <div className="text-xs">
+                          {formatFileSize(item.size)}
+                        </div>
                       ) : (
-                        <>
-                          <div>{formatFileSize(item.size)}</div>
-                          <div className="text-xs mt-1">
-                            {getFileExtension(item.name)}
-                          </div>
-                        </>
+                        <div className="text-xs">
+                          {formatFileSize(item.size)}
+                        </div>
                       )}
                     </td>
                   </motion.tr>
