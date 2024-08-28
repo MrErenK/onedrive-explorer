@@ -110,3 +110,8 @@ body {
     opacity var(--transition-duration) ease,
     transform var(--transition-duration) ease;
 }
+
+/* Prevent transition on page load */
+.no-transition * {
+  transition: none !important;
+}
