@@ -66,7 +66,7 @@ export default function OneDriveExplorer({
         );
         setTimeout(() => {
           router.push("/login");
-        }, 1000);
+        }, 500);
       }
     }
 
@@ -152,9 +152,8 @@ export default function OneDriveExplorer({
 
   return (
     <>
-      {isLoading && <LoadingBar />}
-      <div className="bg-gradient-to-b from-background-light to-background-light/80 dark:from-background-dark dark:to-background-dark/80 min-h-screen p-8">
-        <div className="max-w-6xl mx-auto bg-background-light dark:bg-background-dark rounded-xl shadow-lg p-8">
+      <div className="bg-gradient-to-b from-background-light to-background-light/80 dark:from-background-dark dark:to-background-dark/80 min-h-screen p-4 sm:p-6 md:p-8">
+        <div className="max-w-6xl mx-auto bg-background-light dark:bg-background-dark rounded-xl shadow-lg p-4 sm:p-6 md:p-8">
           <Breadcrumb items={breadcrumbs} />
           <div className="mb-4">
             <SearchBar onSearch={handleSearch} />

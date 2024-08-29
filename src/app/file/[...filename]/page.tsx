@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { formatFileSize, getFileExtension } from "@/utils/fileUtils";
-import LoadingBar from "@/components/LoadingBar";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import Link from "next/link";
 import { ArrowLeftIcon } from "@/components/Icons";
@@ -69,7 +68,6 @@ export default function FilePage() {
     return (
       <>
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background-light dark:bg-background-dark">
-          <LoadingBar />
           <div className="mt-4">
             <LoadingSpinner />
           </div>

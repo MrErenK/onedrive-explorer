@@ -12,7 +12,7 @@ const OneDriveWrapper = () => {
       transition={{ duration: 0.5 }}
       className="bg-background-light dark:bg-background-dark rounded-xl shadow-lg dark:shadow-xl overflow-hidden border border-gray-200 dark:border-gray-700 max-w-6xl mx-auto"
     >
-      <div className="p-6 sm:p-8 md:p-10">
+      <div className="p-4 sm:p-6 md:p-8">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}

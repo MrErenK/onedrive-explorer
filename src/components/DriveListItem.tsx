@@ -56,8 +56,8 @@ export const DriveItemList: React.FC<DriveItemListProps> = ({
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 space-y-4 sm:space-y-0">
-        <div className="text-secondary-light dark:text-secondary-dark text-sm sm:text-base">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 space-y-2 sm:space-y-0">
+        <div className="text-secondary-light dark:text-secondary-dark text-sm sm:text-base w-full sm:w-auto mb-2 sm:mb-0">
           <span className="font-medium">{folderCount}</span> folder
           {folderCount !== 1 ? "s" : ""},{" "}
           <span className="font-medium">{fileCount}</span> file
@@ -65,19 +65,19 @@ export const DriveItemList: React.FC<DriveItemListProps> = ({
         </div>
         <motion.button
           onClick={toggleView}
-          className="flex items-center bg-primary-light dark:bg-primary-dark text-text-dark dark:text-text-light px-4 py-2 rounded-lg hover:bg-primary-light/90 dark:hover:bg-primary-dark/90 transition-colors duration-200 shadow-md hover:shadow-lg"
+          className="flex items-center bg-primary-light dark:bg-primary-dark text-text-dark dark:text-text-light px-3 sm:px-4 py-2 rounded-lg hover:bg-primary-light/90 dark:hover:bg-primary-dark/90 transition-colors duration-200 shadow-md hover:shadow-lg w-full sm:w-auto justify-center sm:justify-start"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
           {isListView ? (
             <>
               <ViewListIcon className="h-5 w-5 mr-2" />
-              <span className="hidden sm:inline">List View</span>
+              <span>List View</span>
             </>
           ) : (
             <>
               <ViewGridIcon className="h-5 w-5 mr-2" />
-              <span className="hidden sm:inline">Grid View</span>
+              <span>Grid View</span>
             </>
           )}
         </motion.button>
@@ -96,13 +96,13 @@ export const DriveItemList: React.FC<DriveItemListProps> = ({
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-100 dark:bg-gray-900">
-                  <th className="text-left p-3 text-text-light dark:text-text-dark font-semibold">
+                  <th className="text-left p-2 sm:p-3 text-text-light dark:text-text-dark font-semibold">
                     Name
                   </th>
-                  <th className="text-left p-3 text-text-light dark:text-text-dark font-semibold hidden sm:table-cell">
+                  <th className="text-left p-2 sm:p-3 text-text-light dark:text-text-dark font-semibold hidden sm:table-cell">
                     Modified
                   </th>
-                  <th className="text-left p-3 text-text-light dark:text-text-dark font-semibold hidden sm:table-cell">
+                  <th className="text-left p-2 sm:p-3 text-text-light dark:text-text-dark font-semibold hidden sm:table-cell">
                     Size
                   </th>
                 </tr>
@@ -118,7 +118,7 @@ export const DriveItemList: React.FC<DriveItemListProps> = ({
                     }}
                     whileTap={{ scale: 0.99 }}
                   >
-                    <td className="p-3">
+                    <td className="p-2 sm:p-3">
                       <div className="flex items-center">
                         {item.folder ? (
                           <FolderIcon className="h-6 w-6 text-primary-light dark:text-primary-dark mr-3 flex-shrink-0" />
@@ -133,12 +133,12 @@ export const DriveItemList: React.FC<DriveItemListProps> = ({
                         </div>
                       </div>
                     </td>
-                    <td className="p-3 text-secondary-light dark:text-secondary-dark hidden sm:table-cell">
+                    <td className="p-2 sm:p-3 text-secondary-light dark:text-secondary-dark hidden sm:table-cell">
                       <div className="text-xs mt-1">
                         {formatDate(item.lastModifiedDateTime)}
                       </div>
                     </td>
-                    <td className="p-3 text-secondary-light dark:text-secondary-dark hidden sm:table-cell">
+                    <td className="p-2 sm:p-3 text-secondary-light dark:text-secondary-dark hidden sm:table-cell">
                       {item.folder ? (
                         <div className="text-xs">
                           {formatFileSize(item.size)}
@@ -163,7 +163,7 @@ export const DriveItemList: React.FC<DriveItemListProps> = ({
             transition={{ duration: 0.3 }}
           >
             <motion.ul
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4"
               layout
             >
               {items.map((item) => (

@@ -82,8 +82,10 @@ export default function RootLayout({
               enableSystem={false}
             >
               <main className="flex flex-col min-h-screen">
-                <Header />
-                <div className="flex-grow">{children}</div>
+                <div className="flex-grow pt-12">
+                  <Header />
+                  {children}
+                </div>
                 <Toaster />
                 <Footer />
               </main>

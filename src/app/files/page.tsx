@@ -1,10 +1,10 @@
 "use client";
 import OneDriveWrapper from "@/components/OneDriveWrapper";
-import LoadingBar from "@/components/LoadingBar";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 export default function OneDrivePage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -52,7 +52,7 @@ export default function OneDrivePage() {
         </h1>
         {isLoading ? (
           <div className="flex flex-col justify-center items-center h-64">
-            <LoadingBar />
+            <LoadingSpinner />
             <p className="mt-4 text-secondary-light dark:text-secondary-dark">
               Loading your OneDrive files...
             </p>
