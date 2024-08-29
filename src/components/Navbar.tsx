@@ -14,6 +14,7 @@ import {
   MenuIcon,
   XIcon,
 } from "./Icons";
+import LoadingBar from "./LoadingBar";
 
 interface NavItemProps {
   href: string;
@@ -62,18 +63,27 @@ const NavBar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const { data: session, status } = useSession();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const checkLoginStatus = async () => {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_APP_URL}/api/log-utils`,
-      );
-      const data = await response.json();
-      setIsLoggedIn(data.isLoggedIn);
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_APP_URL}/api/log-utils`,
+        );
+        const data = await response.json();
+        setIsLoggedIn(data.isLoggedIn);
+      } catch (error) {
+        console.error('Error checking login status:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    checkLoginStatus();
-  }, []);
+    if (status !== 'loading') {
+      checkLoginStatus();
+    }
+  }, [status]);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -118,6 +128,12 @@ const NavBar: React.FC = () => {
     },
   ];
 
+  if (isLoading) {
+    return <div className="flex justify-center items-center h-screen">
+      <LoadingBar />
+    </div>
+  }
+
   return (
     <>
       <div className="hidden md:block">
@@ -144,7 +160,7 @@ const NavBar: React.FC = () => {
               </button>
             </motion.li>
           ) : null}
-          {!isLoggedIn ? (
+          {!isLoggedIn && !session ? (
             <NavItem icon={LoginIcon} href="/login">
               Login
             </NavItem>
@@ -197,11 +213,11 @@ const NavBar: React.FC = () => {
                     <span>Logout</span>
                   </button>
                 </motion.li>
-              ) : (
+              ) : !isLoggedIn && !session ? (
                 <NavItem icon={LoginIcon} isMobile={true} href="/login">
                   Login
                 </NavItem>
-              )}
+              ) : null}
             </ul>
           </motion.div>
         )}
