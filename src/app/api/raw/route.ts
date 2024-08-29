@@ -1,15 +1,8 @@
 import { NextResponse } from "next/server";
 import { downloadFile } from "@/lib/graph";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { getServerTokens } from "@/lib/getServerTokens";
 
 export async function GET(request: Request) {
-  const session = await getServerSession(authOptions);
-
-  if (!session || !session.accessToken) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
-  }
-
   const { searchParams } = new URL(request.url);
   const path = searchParams.get("path");
 
@@ -18,13 +11,15 @@ export async function GET(request: Request) {
   }
 
   try {
-    const file = await downloadFile(session.accessToken, path);
+    const { accessToken } = await getServerTokens();
+    const file = await downloadFile(accessToken, path);
     return new NextResponse(file, {
       headers: {
         "Content-Disposition": `attachment; filename="${path.split("/").pop()}"`,
       },
     });
   } catch (error) {
+    console.error("Error downloading file:", error);
     return NextResponse.json(
       { error: "Failed to download file" },
       { status: 500 },

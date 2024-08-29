@@ -28,74 +28,62 @@ function initClient(accessToken: string) {
   });
 }
 
-async function handleGraphRequest(requestFn: () => Promise<any>) {
-  try {
-    return await requestFn();
-  } catch (error) {
-    if ((error as any).statusCode === 401) {
-      throw new TokenExpiredError("Access token has expired");
-    }
-    throw error;
-  }
-}
-
 export async function getDriveContents(accessToken: string, path: string = "") {
   const client = initClient(accessToken);
 
-  return handleGraphRequest(async () => {
-    let response;
-    if (path) {
-      response = await client
-        .api(`/me/drive/root:/${path}:/children`)
-        .select("id,name,folder,file,lastModifiedDateTime,size")
-        .get();
-    } else {
-      response = await client
-        .api("/me/drive/root/children")
-        .select("id,name,folder,file,lastModifiedDateTime,size")
-        .get();
-    }
+  let response;
+  if (path) {
+    response = await client
+      .api(`/me/drive/root:/${path}:/children`)
+      .select("id,name,folder,file,lastModifiedDateTime,size")
+      .get();
+  } else {
+    response = await client
+      .api("/me/drive/root/children")
+      .select("id,name,folder,file,lastModifiedDateTime,size")
+      .get();
+  }
 
-    return response.value.map((item: any) => ({
-      id: item.id,
-      name: item.name,
-      folder: item.folder,
-      file: item.file,
-      lastModifiedDateTime: item.lastModifiedDateTime,
-      size: item.size || 0,
-    }));
-  });
+  return response.value.map((item: any) => ({
+    id: item.id,
+    name: item.name,
+    folder: item.folder,
+    file: item.file,
+    lastModifiedDateTime: item.lastModifiedDateTime,
+    size: item.size || 0,
+  }));
 }
 
-export async function getDriveItem(accessToken: string, path: string) {
+export async function getDriveItem(accessToken: string, itemIdOrPath: string) {
   const client = initClient(accessToken);
-
   try {
-    const response = await client
-      .api(`/me/drive/root:/${path}`)
-      .select("id,name,file,size,lastModifiedDateTime,webUrl")
-      .get();
-
-    return {
-      id: response.id,
-      name: response.name,
-      mimeType: response.file ? response.file.mimeType : "folder",
-      size: response.size || 0,
-      lastModifiedDateTime: response.lastModifiedDateTime,
-      webUrl: response.webUrl,
-    };
+    let response;
+    if (itemIdOrPath.includes("/")) {
+      // It's a path
+      response = await client
+        .api(`/me/drive/root:/${itemIdOrPath}`)
+        .select("id,name,folder,file,lastModifiedDateTime,size,webUrl,mimeType")
+        .get();
+    } else {
+      // It's an item ID
+      response = await client
+        .api(`/me/drive/items/${itemIdOrPath}`)
+        .select("id,name,folder,file,lastModifiedDateTime,size,webUrl,mimeType")
+        .get();
+    }
+    return response;
   } catch (error) {
-    console.error("Error getting drive item:", error);
+    console.error("Error in getDriveItem:", error);
     throw error;
   }
 }
 
-export async function getFilePath(accessToken: string, itemId: string) {
+export async function downloadFileById(accessToken: string, id: string) {
   const client = initClient(accessToken);
 
   try {
     const response = await client
-      .api(`/me/drive/items/${itemId}`)
+      .api(`/me/drive/items/${id}`)
       .select("name,parentReference")
       .get();
     let path = response.name;

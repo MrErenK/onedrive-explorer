@@ -7,6 +7,7 @@ const nextConfig = {
     NEXT_PUBLIC_GRAPH_API_ENDPOINT: process.env.GRAPH_API_ENDPOINT,
     NEXT_PUBLIC_REDIRECT_URI: process.env.REDIRECT_URI,
     NEXT_PUBLIC_APP_URL: process.env.APP_URL,
+    NEXT_PUBLIC_LOGIN_PASSWORD: process.env.LOGIN_PASSWORD,
   },
 };
 

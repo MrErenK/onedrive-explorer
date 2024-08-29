@@ -8,7 +8,10 @@ const ThemeSwitch = () => {
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    setMounted(true);
+    document.body.classList.add("theme-transition");
+  }, []);
 
   if (!mounted) return null;
 

@@ -9,7 +9,7 @@ import {
   HomeIcon,
   FolderIcon,
   LoginIcon,
-  UserIcon,
+  LogoutIcon,
   GithubIcon,
   MenuIcon,
   XIcon,
@@ -59,15 +59,37 @@ const NavItem: React.FC<NavItemProps> = ({
 };
 
 const NavBar: React.FC = () => {
-  const { data: session } = useSession();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { data: session, status } = useSession();
 
-  const handleLogout = () => {
-    signOut({ callbackUrl: "/" });
-  };
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_APP_URL}/api/log-utils`,
+      );
+      const data = await response.json();
+      setIsLoggedIn(data.isLoggedIn);
+    };
+
+    checkLoginStatus();
+  }, []);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
+  };
+
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/log-utils', { method: 'POST' });
+      if (response.ok) {
+        signOut({ callbackUrl: "/" });
+      } else {
+        console.error('Failed to logout');
+      }
+    } catch (error) {
+      console.error('Error during logout:', error);
+    }
   };
 
   const closeMenu = () => {
@@ -97,51 +119,49 @@ const NavBar: React.FC = () => {
   ];
 
   return (
-    <nav className="relative z-10">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <div className="hidden md:block">
-            <ul className="flex items-center space-x-4">
-              {navItems.map((item) => (
-                <NavItem
-                  key={item.href}
-                  href={item.href}
-                  icon={item.icon}
-                  target={item.target}
-                >
-                  {item.label}
-                </NavItem>
-              ))}
-              {!session ? (
-                <NavItem href="/login" icon={LoginIcon}>
-                  Login
-                </NavItem>
-              ) : (
-                <motion.li
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <button className="flex items-center space-x-2 px-3 py-2 rounded-md transition-colors hover:bg-primary-light/10 dark:hover:bg-primary-dark/10 text-text-light dark:text-text-dark hover:text-primary-light dark:hover:text-primary-dark">
-                    <UserIcon className="w-5 h-5 flex-shrink-0" />
-                    <span>Logged in as {session?.user?.name}</span>
-                  </button>
-                </motion.li>
-              )}
-            </ul>
-          </div>
-          <div className="md:hidden">
-            <button
-              onClick={toggleMenu}
-              className="text-text-light dark:text-text-dark hover:text-primary-light dark:hover:text-primary-dark p-2"
+    <>
+      <div className="hidden md:block">
+        <ul className="flex items-center space-x-4">
+          {navItems.map((item) => (
+            <NavItem
+              key={item.href}
+              href={item.href}
+              icon={item.icon}
+              target={item.target}
             >
-              {isMenuOpen ? (
-                <XIcon className="w-6 h-6" />
-              ) : (
-                <MenuIcon className="w-6 h-6" />
-              )}
-            </button>
-          </div>
-        </div>
+              {item.label}
+            </NavItem>
+          ))}
+          {session && isLoggedIn ? (
+            <motion.li
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleLogout}
+            >
+              <button className="flex items-center space-x-2 px-3 py-2 rounded-md transition-colors hover:bg-primary-light/10 dark:hover:bg-primary-dark/10 text-text-light dark:text-text-dark hover:text-primary-light dark:hover:text-primary-dark">
+                <LogoutIcon className="w-5 h-5 flex-shrink-0" />
+                <span>Logout</span>
+              </button>
+            </motion.li>
+          ) : null}
+          {!isLoggedIn ? (
+            <NavItem icon={LoginIcon} href="/login">
+              Login
+            </NavItem>
+          ) : null}
+        </ul>
+      </div>
+      <div className="md:hidden">
+        <button
+          onClick={toggleMenu}
+          className="text-text-light dark:text-text-dark hover:text-primary-light dark:hover:text-primary-dark p-2"
+        >
+          {isMenuOpen ? (
+            <XIcon className="w-6 h-6" />
+          ) : (
+            <MenuIcon className="w-6 h-6" />
+          )}
+        </button>
       </div>
 
       <AnimatePresence>
@@ -151,7 +171,7 @@ const NavBar: React.FC = () => {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
-            className="md:hidden absolute top-16 left-0 bg-background-light dark:bg-background-dark shadow-lg overflow-hidden"
+            className="md:hidden absolute top-16 left-0 right-0 bg-background-light dark:bg-background-dark shadow-lg overflow-hidden"
           >
             <ul className="px-2 py-3 space-y-2">
               {navItems.map((item) => (
@@ -166,38 +186,27 @@ const NavBar: React.FC = () => {
                   {item.label}
                 </NavItem>
               ))}
-              {!session ? (
-                <NavItem
-                  href="/login"
-                  icon={LoginIcon}
-                  onClick={closeMenu}
-                  isMobile={true}
-                >
-                  Login
-                </NavItem>
-              ) : (
+              {session && isLoggedIn ? (
                 <motion.li
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full flex justify-center items-center"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleLogout}
                 >
-                  <button
-                    onClick={() => {
-                      closeMenu();
-                    }}
-                    className="flex items-center space-x-2 w-full px-3 py-2 rounded-md transition-colors hover:bg-primary-light/10 dark:hover:bg-primary-dark/10 text-text-light dark:text-text-dark hover:text-primary-light dark:hover:text-primary-dark"
-                  >
-                    <UserIcon className="w-5 h-5 flex-shrink-0" />
-                    <span className="flex-grow">
-                      Logged in as {session?.user?.name}
-                    </span>
+                  <button className="flex items-center space-x-2 px-3 py-2 rounded-md transition-colors hover:bg-primary-light/10 dark:hover:bg-primary-dark/10 text-text-light dark:text-text-dark hover:text-primary-light dark:hover:text-primary-dark">
+                    <LogoutIcon className="w-5 h-5 flex-shrink-0" />
+                    <span>Logout</span>
                   </button>
                 </motion.li>
+              ) : (
+                <NavItem icon={LoginIcon} isMobile={true} href="/login">
+                  Login
+                </NavItem>
               )}
             </ul>
           </motion.div>
         )}
       </AnimatePresence>
-    </nav>
+    </>
   );
 };
 

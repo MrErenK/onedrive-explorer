@@ -6,7 +6,7 @@ import {
   ViewListIcon,
   ViewGridIcon,
 } from "@/components/Icons";
-import { formatFileSize } from "@/utils/fileUtils";
+import { formatFileSize, getFileExtension } from "@/utils/fileUtils";
 
 interface DriveItem {
   id: string;
@@ -53,10 +53,6 @@ export const DriveItemList: React.FC<DriveItemListProps> = ({
 
   const folderCount = items.filter((item) => item.folder).length;
   const fileCount = items.length - folderCount;
-
-  function getFileExtension(filename: string): string {
-    return filename.slice(((filename.lastIndexOf(".") - 1) >>> 0) + 2);
-  }
 
   return (
     <div>

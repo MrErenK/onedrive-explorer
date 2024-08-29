@@ -13,9 +13,9 @@ import { Breadcrumb } from "@/components/Breadcrumb";
 import { DriveItemList } from "@/components/DriveListItem";
 import SearchBar from "@/components/SearchBar";
 import toast from "react-hot-toast";
-import { signOut, getSession } from "next-auth/react";
 import { getDriveContents, TokenExpiredError } from "@/lib/graph";
 import LoadingSpinner from "./LoadingSpinner";
+import { getServerTokens } from "@/lib/getServerTokens";
 
 interface DriveItem {
   id: string;
@@ -28,7 +28,18 @@ interface DriveItem {
   lastModifiedDateTime: string;
 }
 
-export default function OneDriveExplorer() {
+interface OneDriveExplorerProps {
+  initialTokens?: {
+    accessToken: string;
+    refreshToken: string;
+    expiresAt: Date;
+  };
+}
+
+export default function OneDriveExplorer({
+  initialTokens,
+}: OneDriveExplorerProps) {
+  const [tokens, setTokens] = useState(initialTokens);
   const [items, setItems] = useState<DriveItem[]>([]);
   const [filteredItems, setFilteredItems] = useState<DriveItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -39,33 +50,52 @@ export default function OneDriveExplorer() {
 
   const currentPath = Array.isArray(params.path) ? params.path.join("/") : "";
 
-  const getAccessToken = async () => {
-    const session = await getSession();
-    return session?.accessToken;
-  };
-
-  const fetchItems = useCallback(async (path: string) => {
-    setIsLoading(true);
-    try {
-      const accessToken = await getAccessToken();
-      if (accessToken) {
-        const data = await getDriveContents(accessToken, path);
-        setItems(data);
-      } else {
-        throw new Error("Failed to get access token");
+  useEffect(() => {
+    async function fetchTokens() {
+      try {
+        const fetchedTokens = await getServerTokens();
+        if (fetchedTokens) {
+          setTokens(fetchedTokens);
+        } else {
+          throw new Error("Tokens not received");
+        }
+      } catch (error) {
+        console.error("Failed to fetch tokens:", error);
+        toast.error(
+          "Failed to fetch authentication tokens. Please try logging in again. Redirecting to login page...",
+        );
+        setTimeout(() => {
+          router.push("/login");
+        }, 1000);
       }
-    } catch (error) {
-      if (error instanceof TokenExpiredError) {
-        toast.error("Your session has expired. Please log in again.");
-        signOut({ callbackUrl: "/login" });
-      } else {
-        toast.error("An error occurred while fetching items.");
-        console.error("Error fetching items:", error);
-      }
-    } finally {
-      setIsLoading(false);
     }
-  }, []);
+
+    if (!tokens) {
+      fetchTokens();
+    }
+  }, [tokens, router]);
+
+  const fetchItems = useCallback(
+    async (path: string) => {
+      if (!tokens?.accessToken) return;
+
+      setIsLoading(true);
+      try {
+        const data = await getDriveContents(tokens.accessToken, path);
+        setItems(data);
+      } catch (error) {
+        if (error instanceof TokenExpiredError) {
+          toast.error("Your session has expired. Please relogin.");
+        } else {
+          toast.error("An error occurred while fetching items.");
+          console.error("Error fetching items:", error);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [tokens?.accessToken],
+  );
 
   useEffect(() => {
     fetchItems(currentPath);
@@ -111,6 +141,19 @@ export default function OneDriveExplorer() {
   };
 
   const breadcrumbs = ["Home", ...currentPath.split("/").filter(Boolean)];
+
+  if (!tokens) {
+    return (
+      <div className="flex flex-col justify-center items-center h-screen">
+        <div className="text-center">
+          <LoadingSpinner />
+          <p className="mt-4 text-lg text-text-light dark:text-text-dark">
+            Loading OneDrive content...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

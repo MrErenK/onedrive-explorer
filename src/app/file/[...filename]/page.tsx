@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { formatFileSize } from "@/utils/fileUtils";
+import { formatFileSize, getFileExtension } from "@/utils/fileUtils";
 import LoadingBar from "@/components/LoadingBar";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import Link from "next/link";
 import { ArrowLeftIcon } from "@/components/Icons";
 import toast from "react-hot-toast";
+
 interface FileDetails {
   id: string;
   name: string;
@@ -49,12 +50,17 @@ export default function FilePage() {
   }, [filePath]);
 
   const handleDownload = () => {
-    window.open(`/api/raw?path=${encodeURIComponent(filePath)}`, "_blank");
+    window.open(
+      `/api/onedrive?action=download&path=${encodeURIComponent(filePath)}`,
+      "_blank",
+    );
   };
 
   const handleCopyLink = () => {
     navigator.clipboard
-      .writeText(`${process.env.NEXT_PUBLIC_APP_URL}/api/raw?path=${filePath}`)
+      .writeText(
+        `${process.env.NEXT_PUBLIC_APP_URL}/api/onedrive?action=download&path=${encodeURIComponent(filePath)}`,
+      )
       .then(() => toast.success("Link copied to clipboard"))
       .catch((err) => toast.error("Failed to copy link"));
   };
@@ -107,7 +113,7 @@ export default function FilePage() {
           <div>
             <p className="text-gray-500 dark:text-gray-400">Type</p>
             <p className="font-semibold text-text-light dark:text-text-dark">
-              {fileDetails.mimeType || "Unknown"}
+              {getFileExtension(fileDetails.name)}
             </p>
           </div>
           <div>

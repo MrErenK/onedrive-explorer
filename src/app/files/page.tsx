@@ -10,22 +10,34 @@ export default function OneDrivePage() {
   const [isLoading, setIsLoading] = useState(true);
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const checkLoginStatus = async () => {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_APP_URL}/api/log-utils`,
+      );
+      const data = await response.json();
+      setIsLoggedIn(data.isLoggedIn);
+    };
+
+    checkLoginStatus();
+  }, []);
 
   useEffect(() => {
     if (status === "loading") return;
 
-    if (!session) {
-      router.push("/login");
-      return;
-    }
-
     // Simulate a short loading time
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 1000);
+    }, 100);
+
+    if (!isLoading && !isLoggedIn) {
+      router.push("/login");
+    }
 
     return () => clearTimeout(timer);
-  }, [session, status, router]);
+  }, [isLoading, isLoggedIn, session, status, router]);
 
   return (
     <motion.div
