@@ -30,7 +30,7 @@ export default function OneDrivePage() {
     // Simulate a short loading time
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 100);
+    }, 1000);
 
     if (!isLoading && !isLoggedIn) {
       router.push("/login");
