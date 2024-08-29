@@ -42,7 +42,7 @@ export default function OneDriveExplorer({
   const [tokens, setTokens] = useState(initialTokens);
   const [items, setItems] = useState<DriveItem[]>([]);
   const [filteredItems, setFilteredItems] = useState<DriveItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
   const params = useParams();
@@ -144,13 +144,8 @@ export default function OneDriveExplorer({
 
   if (!tokens) {
     return (
-      <div className="flex flex-col justify-center items-center h-screen">
-        <div className="text-center">
-          <LoadingSpinner />
-          <p className="mt-4 text-lg text-text-light dark:text-text-dark">
-            Loading OneDrive content...
-          </p>
-        </div>
+      <div className="flex justify-center items-center h-screen bg-gradient-to-b from-background-light to-background-light/80 dark:from-background-dark dark:to-background-dark/80">
+        <LoadingSpinner />
       </div>
     );
   }
@@ -165,22 +160,19 @@ export default function OneDriveExplorer({
             <SearchBar onSearch={handleSearch} />
           </div>
           {isLoading ? (
-            <>
-              <LoadingBar />
-              <div className="flex justify-center items-center h-full mt-12">
-                <LoadingSpinner />
-              </div>
-            </>
+            <LoadingBar />
           ) : (
-            <DriveItemList
-              items={filteredItems}
-              onItemClick={handleItemClick}
-            />
-          )}
-          {items.length === 0 && !isLoading && (
-            <p className="text-text-light dark:text-text-dark text-center mt-8 text-lg">
-              This folder is empty.
-            </p>
+            <>
+              <DriveItemList
+                items={filteredItems}
+                onItemClick={handleItemClick}
+              />
+              {items.length === 0 && (
+                <p className="text-text-light dark:text-text-dark text-center mt-8 text-lg">
+                  This folder is empty.
+                </p>
+              )}
+            </>
           )}
         </div>
       </div>
