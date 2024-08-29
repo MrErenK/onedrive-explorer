@@ -74,13 +74,13 @@ const NavBar: React.FC = () => {
         const data = await response.json();
         setIsLoggedIn(data.isLoggedIn);
       } catch (error) {
-        console.error('Error checking login status:', error);
+        console.error("Error checking login status:", error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (status !== 'loading') {
+    if (status !== "loading") {
       checkLoginStatus();
     }
   }, [status]);
@@ -91,14 +91,14 @@ const NavBar: React.FC = () => {
 
   const handleLogout = async () => {
     try {
-      const response = await fetch('/api/log-utils', { method: 'POST' });
+      const response = await fetch("/api/log-utils", { method: "POST" });
       if (response.ok) {
         signOut({ callbackUrl: "/" });
       } else {
-        console.error('Failed to logout');
+        console.error("Failed to logout");
       }
     } catch (error) {
-      console.error('Error during logout:', error);
+      console.error("Error during logout:", error);
     }
   };
 
@@ -129,9 +129,11 @@ const NavBar: React.FC = () => {
   ];
 
   if (isLoading) {
-    return <div className="flex justify-center items-center h-screen">
-      <LoadingBar />
-    </div>
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <LoadingBar />
+      </div>
+    );
   }
 
   return (
