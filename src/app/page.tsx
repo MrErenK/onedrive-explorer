@@ -26,7 +26,7 @@ export default function Home() {
           transition={{ delay: 0.4, duration: 0.5 }}
           className="text-xl sm:text-2xl text-secondary-light dark:text-secondary-dark mb-8"
         >
-          Effortlessly browse and manage your OneDrive files with our intuitive
+          Effortlessly browse and search OneDrive files with our intuitive
           interface.
         </motion.p>
         <motion.div
