@@ -1,6 +1,6 @@
 import React, { Suspense } from "react";
 import { Inter } from "next/font/google";
-import { Metadata } from "next";
+import { Metadata, Viewport } from "next";
 import dynamic from "next/dynamic";
 import Footer from "@/components/Footer";
 import "./globals.css";
@@ -14,8 +14,36 @@ const Header = dynamic(() => import("@/components/Header"), { ssr: false });
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "OneDrive Index",
-  description: "Browse and manage your OneDrive files",
+  title: "OneDrive Explorer",
+  description: "Browse and search your OneDrive files",
+  icons: {
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
+    icon: [
+      { url: "/icons/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
+    shortcut: [{ url: "/icons/favicon.svg" }],
+    other: [
+      { rel: "manifest", url: "/icons/site.webmanifest" },
+      {
+        rel: "mask-icon",
+        url: "/icons/safari-pinned-tab.svg",
+        color: "#5bbad5",
+      },
+    ],
+  },
+  appleWebApp: {
+    title: "OneDrive Explorer",
+  },
+  applicationName: "OneDrive Explorer",
+  other: {
+    "msapplication-TileColor": "#da532c",
+    "msapplication-config": "/icons/browserconfig.xml",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({
@@ -26,6 +54,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -52,14 +81,12 @@ export default function RootLayout({
               defaultTheme="dark"
               enableSystem={false}
             >
-              <main>
-                <div className="flex flex-col h-16">
-                  <Header />
-                </div>
-                {children}
+              <main className="flex flex-col min-h-screen">
+                <Header />
+                <div className="flex-grow">{children}</div>
                 <Toaster />
+                <Footer />
               </main>
-              <Footer />
             </ThemeProvider>
           </body>
         </AuthProvider>
