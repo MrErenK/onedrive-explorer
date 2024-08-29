@@ -3,10 +3,11 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { formatFileSize, getFileExtension } from "@/utils/fileUtils";
-import LoadingSpinner from "@/components/LoadingSpinner";
 import Link from "next/link";
 import { ArrowLeftIcon } from "@/components/Icons";
 import toast from "react-hot-toast";
+import LoadingBar from "@/components/LoadingBar";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 interface FileDetails {
   id: string;
@@ -66,14 +67,20 @@ export default function FilePage() {
 
   if (isLoading)
     return (
-      <>
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background-light dark:bg-background-dark">
-          <div className="mt-4">
-            <LoadingSpinner />
-          </div>
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 min-h-screen flex flex-col justify-center items-center">
+        <LoadingBar />
+        <div className="text-center">
+          <LoadingSpinner />
+          <p className="text-secondary-light dark:text-secondary-dark text-lg sm:text-xl font-medium animate-pulse mt-4">
+            Loading file details...
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 animate-pulse">
+            This may take a moment
+          </p>
         </div>
-      </>
+      </div>
     );
+
   if (error)
     return <div className="text-red-500 dark:text-red-400">{error}</div>;
   if (!fileDetails)

@@ -1,8 +1,13 @@
 import React from "react";
+import { cn } from "@/utils/utils";
 
-const LoadingSpinner: React.FC = () => {
+interface LoadingSpinnerProps {
+  className?: string;
+}
+
+const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ className }) => {
   return (
-    <div className="flex items-center justify-center">
+    <div className={cn("flex items-center justify-center", className)}>
       <div className="relative">
         <svg
           className="animate-spin h-10 w-10 text-primary-light dark:text-primary-dark"
