@@ -14,10 +14,10 @@ datasource db {
 }
 
 model tokens {
-  id String @id @default(uuid())
-  expiresAt DateTime
-  accessToken String @db.Text
-  refreshToken String @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(uuid())
+  expiresAt     DateTime
+  accessToken   String   @db.Text
+  refreshToken  String   @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }

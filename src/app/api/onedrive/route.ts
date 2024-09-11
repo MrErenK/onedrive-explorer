@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getDriveContents, getDriveItem, downloadFile } from "@/lib/graph";
 import { getServerTokens } from "@/lib/getServerTokens";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 
 async function RefreshToken(refreshToken: string) {
   const response = await fetch(
@@ -24,9 +26,7 @@ async function RefreshToken(refreshToken: string) {
     throw new Error("Failed to refresh token");
   }
 
-  const tokens = await prisma.tokens.findFirst();
-  await prisma.tokens.update({
-    where: { id: tokens?.id },
+  await prisma.tokens.updateMany({
     data: {
       accessToken: data.access_token,
       refreshToken: data.refresh_token,
@@ -34,25 +34,37 @@ async function RefreshToken(refreshToken: string) {
     },
   });
 
-  return data.access_token;
+  return {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    expiresAt: new Date(Date.now() + data.expires_in * 1000),
+  };
 }
 
 export async function GET(request: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const userId = session.user.id;
+
   const { searchParams } = new URL(request.url);
   const path = searchParams.get("path") || "";
   const action = searchParams.get("action");
   const itemId = searchParams.get("itemId");
   try {
-    const tokens = await getServerTokens();
+    let tokens = await getServerTokens();
     if (!tokens) {
       throw new Error("Failed to retrieve server tokens");
     }
 
-    let { accessToken, refreshToken, expiresAt } = tokens;
-
-    if (Date.now() > expiresAt.getTime()) {
-      accessToken = await RefreshToken(refreshToken);
+    if (Date.now() > tokens.expiresAt.getTime() - 300000) {
+      // Refresh if within 5 minutes of expiration
+      tokens = await RefreshToken(tokens.refreshToken);
     }
+
+    const { accessToken } = tokens;
 
     switch (action) {
       case "download":
@@ -62,12 +74,8 @@ export async function GET(request: Request) {
             { status: 400 },
           );
         }
-        const fileContent = await downloadFile(accessToken, path);
-        return new NextResponse(fileContent, {
-          headers: {
-            "Content-Disposition": `attachment; filename="${path.split("/").pop()}"`,
-          },
-        });
+        const downloadUrl = await downloadFile(accessToken, path);
+        return NextResponse.redirect(downloadUrl);
       case "item":
         if (!itemId && !path) {
           return NextResponse.json(

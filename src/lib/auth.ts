@@ -18,19 +18,24 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async signIn({ user, account }) {
-      if (account && account.access_token && account.refresh_token) {
+      if (
+        account &&
+        account.access_token &&
+        account.refresh_token &&
+        account.expires_at
+      ) {
         await prisma.tokens.upsert({
           where: { id: user.id },
           update: {
             accessToken: account.access_token,
             refreshToken: account.refresh_token,
-            expiresAt: new Date(account.expires_at! * 1000),
+            expiresAt: new Date(account.expires_at * 1000),
           },
           create: {
             id: user.id,
             accessToken: account.access_token,
             refreshToken: account.refresh_token,
-            expiresAt: new Date(account.expires_at! * 1000),
+            expiresAt: new Date(account.expires_at * 1000),
           },
         });
       }
@@ -109,6 +114,15 @@ export const authOptions: NextAuthOptions = {
     },
   },
   session: {
-    maxAge: 365 * 24 * 60 * 60, // 1 year
+    strategy: "jwt",
+    maxAge: 2 * 365 * 24 * 60 * 60, // 2 years
+  },
+  jwt: {
+    maxAge: 2 * 365 * 24 * 60 * 60, // 2 years
+  },
+  pages: {
+    signIn: "/auth/signin",
+    signOut: "/auth/signout",
+    error: "/auth/error",
   },
 };

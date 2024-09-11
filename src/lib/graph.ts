@@ -109,10 +109,13 @@ export async function downloadFile(accessToken: string, path: string) {
   const client = initClient(accessToken);
 
   try {
-    const response = await client.api(`/me/drive/root:/${path}:/content`).get();
-    return response;
+    const response = await client
+      .api(`/me/drive/root:/${path}`)
+      .select("@microsoft.graph.downloadUrl")
+      .get();
+    return response["@microsoft.graph.downloadUrl"];
   } catch (error) {
-    console.error("Error downloading file:", error);
+    console.error("Error getting download URL:", error);
     throw error;
   }
 }

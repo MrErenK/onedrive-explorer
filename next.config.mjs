@@ -9,6 +9,30 @@ const nextConfig = {
     NEXT_PUBLIC_APP_URL: process.env.APP_URL,
     NEXT_PUBLIC_LOGIN_PASSWORD: process.env.LOGIN_PASSWORD,
   },
+  redirects: async () => {
+    return [
+      {
+        source: "/login",
+        destination: "/auth/signin",
+        permanent: true,
+      },
+      {
+        source: "/logout",
+        destination: "/api/signout",
+        permanent: true,
+      },
+      {
+        source: "/signout",
+        destination: "/auth/signout",
+        permanent: true,
+      },
+      {
+        source: "/signin",
+        destination: "/auth/signin",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
