@@ -44,25 +44,20 @@ async function refreshToken(refreshToken: string) {
     throw new Error("Failed to refresh token");
   }
 
-  await prisma.tokens.updateMany({
-    where: {},
-    data: {
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token,
-      expiresAt: new Date(Date.now() + data.expires_in * 1000),
-    },
-  });
-
-  console.log(
-    "Token refreshed, new expiration:",
-    new Date(Date.now() + data.expires_in * 1000),
-  );
-
-  return {
+  const newTokens = {
     accessToken: data.access_token,
     refreshToken: data.refresh_token,
     expiresAt: new Date(Date.now() + data.expires_in * 1000),
   };
+
+  await prisma.tokens.updateMany({
+    where: {},
+    data: newTokens,
+  });
+
+  console.log("Token refreshed, new expiration:", newTokens.expiresAt);
+
+  return newTokens;
 }
 
 export async function GET(request: Request) {
