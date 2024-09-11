@@ -59,8 +59,8 @@ export async function GET(request: Request) {
       throw new Error("Failed to retrieve server tokens");
     }
 
-    if (Date.now() > tokens.expiresAt.getTime() - 300000) {
-      // Refresh if within 5 minutes of expiration
+    if (Date.now() > tokens.expiresAt.getTime() - 5000) {
+      // Refresh if within 5 seconds of expiration
       tokens = await RefreshToken(tokens.refreshToken);
     }
 
