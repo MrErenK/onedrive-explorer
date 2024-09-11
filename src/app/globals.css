@@ -8,15 +8,16 @@
 
 body {
   @apply antialiased text-text-light bg-background-light transition-colors duration-300;
+  font-family: "Inter", sans-serif;
 }
 
 .dark body {
   @apply text-text-dark bg-background-dark;
 }
 
-/* Subtle scrollbar */
+/* Enhanced subtle scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
 }
 
 ::-webkit-scrollbar-track {
@@ -24,31 +25,31 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-gray-400 dark:bg-gray-600 rounded;
+  @apply bg-gray-400 dark:bg-gray-600 rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-gray-500 dark:bg-gray-500;
 }
 
-/* Custom animations */
+/* Improved custom animations */
 @keyframes gentle-float {
   0%,
   100% {
     transform: translateY(0px);
   }
   50% {
-    transform: translateY(-5px);
+    transform: translateY(-8px);
   }
 }
 
 .animate-gentle-float {
-  animation: gentle-float 0.2s ease-in-out infinite;
+  animation: gentle-float 3s ease-in-out infinite;
 }
 
-/* Custom utilities */
+/* Enhanced custom utilities */
 .text-shadow-sm {
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.15);
 }
 
 .hover-lift {
@@ -56,26 +57,36 @@ body {
 }
 
 .hover-lift:hover {
-  transform: translateY(-3px);
+  transform: translateY(-5px);
 }
 
 @layer utilities {
   .max-w-6xl {
     max-width: 72rem;
   }
+  .text-gradient {
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    background-image: linear-gradient(
+      45deg,
+      var(--primary-color),
+      var(--secondary-color)
+    );
+  }
 }
 
-/* Soft glass effect */
+/* Improved soft glass effect */
 .soft-glass {
-  @apply bg-white bg-opacity-10 backdrop-blur-sm rounded-lg border border-white border-opacity-20;
+  @apply bg-white bg-opacity-10 backdrop-blur-md rounded-lg border border-white border-opacity-20 shadow-lg;
 }
 
-/* Fancy focus styles */
+/* Enhanced fancy focus styles */
 .fancy-focus:focus {
-  @apply outline-none ring-2 ring-primary-light ring-opacity-50;
+  @apply outline-none ring-2 ring-primary-light ring-opacity-50 transition-shadow duration-300;
 }
 
-/* Responsive typography */
+/* Improved responsive typography */
 @screen sm {
   html {
     font-size: 14px;
@@ -91,24 +102,30 @@ body {
     font-size: 18px;
   }
 }
+@screen xl {
+  html {
+    font-size: 20px;
+  }
+}
 
-/* Dark mode adjustments */
+/* Enhanced dark mode adjustments */
 .dark .soft-glass {
-  @apply bg-gray-800 bg-opacity-30 border-gray-700 border-opacity-50;
+  @apply bg-gray-800 bg-opacity-30 border-gray-700 border-opacity-50 shadow-xl;
 }
 
 .dark .fancy-focus:focus {
   @apply ring-primary-dark ring-opacity-50;
 }
 
-/* Global transition for theme change */
+/* Optimized global transition for theme change */
 * {
   transition:
     background-color var(--transition-duration) ease,
     border-color var(--transition-duration) ease,
     color var(--transition-duration) ease,
     opacity var(--transition-duration) ease,
-    transform var(--transition-duration) ease;
+    transform var(--transition-duration) ease,
+    box-shadow var(--transition-duration) ease;
 }
 
 /* Prevent transition on page load */
@@ -119,5 +136,17 @@ body {
 .theme-transition {
   transition:
     background-color 0.3s ease,
-    color 0.3s ease;
+    color 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+/* New: Improved accessibility */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

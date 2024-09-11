@@ -11,7 +11,10 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items }) => (
       {items.map((item, index) => (
         <li key={index} className="flex items-center">
           {index > 0 && (
-            <ChevronRightIcon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 dark:text-gray-500 mx-1 sm:mx-2" />
+            <ChevronRightIcon
+              className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 dark:text-gray-500 mx-1 sm:mx-2"
+              aria-hidden="true"
+            />
           )}
           <Link
             href={
@@ -19,12 +22,18 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ items }) => (
                 ? "/files"
                 : `/files/${items.slice(1, index + 1).join("/")}`
             }
-            className="flex items-center hover:text-primary-light dark:hover:text-primary-dark transition-colors duration-200"
+            className="flex items-center hover:text-primary-light dark:hover:text-primary-dark transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark rounded"
           >
             {index === 0 ? (
-              <HomeIcon className="w-4 h-4 sm:w-5 sm:h-5 mr-1" />
+              <HomeIcon
+                className="w-4 h-4 sm:w-5 sm:h-5 mr-1"
+                aria-hidden="true"
+              />
             ) : (
-              <FolderIcon className="w-4 h-4 sm:w-5 sm:h-5 mr-1" />
+              <FolderIcon
+                className="w-4 h-4 sm:w-5 sm:h-5 mr-1"
+                aria-hidden="true"
+              />
             )}
             <span className="truncate max-w-[100px] sm:max-w-none">
               {index === 0 ? "Home" : item}

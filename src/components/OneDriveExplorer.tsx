@@ -16,6 +16,8 @@ import toast from "react-hot-toast";
 import { getDriveContents, TokenExpiredError } from "@/lib/graph";
 import LoadingSpinner from "./LoadingSpinner";
 import { getServerTokens } from "@/lib/getServerTokens";
+import { motion, AnimatePresence } from "framer-motion";
+import { ExclamationCircleIcon } from "@/components/Icons";
 
 interface DriveItem {
   id: string;
@@ -34,20 +36,23 @@ interface OneDriveExplorerProps {
     refreshToken: string;
     expiresAt: Date;
   };
+  onPathNotFound?: () => void;
 }
 
 export default function OneDriveExplorer({
   initialTokens,
+  onPathNotFound,
 }: OneDriveExplorerProps) {
   const [tokens, setTokens] = useState(initialTokens);
   const [items, setItems] = useState<DriveItem[]>([]);
   const [filteredItems, setFilteredItems] = useState<DriveItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
   const params = useParams();
   const scrollPositionRef = useRef<number>(0);
-
+  const [pathNotFound, setPathNotFound] = useState(false);
   const currentPath = Array.isArray(params.path) ? params.path.join("/") : "";
 
   useEffect(() => {
@@ -82,19 +87,29 @@ export default function OneDriveExplorer({
       setIsLoading(true);
       try {
         const data = await getDriveContents(tokens.accessToken, path);
-        setItems(data);
+        if (data === null) {
+          setPathNotFound(true);
+          onPathNotFound?.(); // Call the callback if provided
+        } else {
+          setItems(data);
+          setFilteredItems(data);
+          setPathNotFound(false);
+        }
       } catch (error) {
         if (error instanceof TokenExpiredError) {
           toast.error("Your session has expired. Please relogin.");
         } else {
           toast.error("An error occurred while fetching items.");
           console.error("Error fetching items:", error);
+          setPathNotFound(true);
+          onPathNotFound?.(); // Call the callback if provided
         }
       } finally {
         setIsLoading(false);
+        setIsInitialLoad(false);
       }
     },
-    [tokens?.accessToken],
+    [tokens?.accessToken, onPathNotFound],
   );
 
   useEffect(() => {
@@ -119,12 +134,14 @@ export default function OneDriveExplorer({
 
       if (item.folder) {
         const newPath = currentPath ? `${currentPath}/${item.name}` : item.name;
-        router.push(`/files/${newPath}`);
+        setIsLoading(true);
+        router.replace(`/files/${newPath}`);
       } else {
         // Navigate to the file details page
         const filePath = currentPath
           ? `${currentPath}/${item.name}`
           : item.name;
+        setIsLoading(true);
         router.push(`/file/${filePath}`);
       }
     },
@@ -150,22 +167,76 @@ export default function OneDriveExplorer({
     );
   }
 
+  if (pathNotFound) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="flex flex-col items-center justify-center h-full p-8 text-center"
+      >
+        <ExclamationCircleIcon className="w-16 h-16 text-yellow-500 mb-4" />
+        <motion.h2
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+          className="text-2xl font-semibold text-gray-700 dark:text-gray-300 mb-2"
+        >
+          Path Not Found
+        </motion.h2>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4, duration: 0.5 }}
+          className="text-lg text-gray-600 dark:text-gray-400 mb-4"
+        >
+          The folder or file you&apos;re looking for doesn&apos;t exist or has
+          been moved.
+        </motion.p>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="px-4 py-2 bg-primary-light dark:bg-primary-dark text-primary-dark dark:text-primary-light rounded-md shadow-md hover:bg-primary-light/90 dark:hover:bg-primary-dark/90 transition-colors duration-200"
+          onClick={() => router.replace("/files")}
+        >
+          Go Home
+        </motion.button>
+      </motion.div>
+    );
+  }
+
   return (
     <>
       <div className="bg-gradient-to-b from-background-light to-background-light/80 dark:from-background-dark dark:to-background-dark/80 min-h-screen p-4 sm:p-6 md:p-8">
-        <div className="max-w-6xl mx-auto bg-background-light dark:bg-background-dark rounded-xl shadow-lg p-4 sm:p-6 md:p-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.3 }}
+          className="max-w-6xl mx-auto bg-background-light dark:bg-background-dark rounded-xl shadow-lg p-4 sm:p-6 md:p-8"
+        >
           <Breadcrumb items={breadcrumbs} />
           <div className="mb-4">
             <SearchBar onSearch={handleSearch} />
           </div>
-          {isLoading ? (
+          {isLoading || isInitialLoad ? (
             <LoadingBar />
           ) : (
             <>
-              <DriveItemList
-                items={filteredItems}
-                onItemClick={handleItemClick}
-              />
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentPath}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <DriveItemList
+                    items={filteredItems}
+                    onItemClick={handleItemClick}
+                  />
+                </motion.div>
+              </AnimatePresence>
               {items.length === 0 && (
                 <p className="text-text-light dark:text-text-dark text-center mt-8 text-lg">
                   This folder is empty.
@@ -173,7 +244,7 @@ export default function OneDriveExplorer({
               )}
             </>
           )}
-        </div>
+        </motion.div>
       </div>
     </>
   );

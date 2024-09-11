@@ -11,7 +11,7 @@ const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const { scrollY } = useScroll();
   const headerOpacity = useTransform(scrollY, [0, 50], [0.9, 1]);
-  const headerHeight = useTransform(scrollY, [0, 50], ["3.5rem", "3rem"]);
+  const headerHeight = useTransform(scrollY, [0, 50], ["4rem", "3.5rem"]);
 
   useEffect(() => {
     const updateScrolled = () => {
@@ -26,20 +26,20 @@ const Header = () => {
       style={{ opacity: headerOpacity, height: headerHeight }}
       className={`fixed w-full top-0 left-0 z-50 bg-background-light dark:bg-background-dark text-text-light dark:text-text-dark shadow-md transition-all duration-300 backdrop-blur-md ${
         isScrolled
-          ? "backdrop-blur-lg bg-background-light/70 dark:bg-background-dark/70"
+          ? "backdrop-blur-lg bg-background-light/80 dark:bg-background-dark/80"
           : ""
       }`}
     >
       <div className="container mx-auto px-4 h-full flex justify-between items-center">
         <div className="flex items-center space-x-2">
-          <CloudIcon className="h-5 w-5 text-primary-light dark:text-primary-dark" />
+          <CloudIcon className="h-6 w-6 md:h-7 md:w-7 text-primary-light dark:text-primary-dark" />
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2, duration: 0.5 }}
           >
             <Link href="/">
-              <span className="text-sm font-bold hidden sm:inline text-primary-light dark:text-primary-dark">
+              <span className="text-sm md:text-base font-bold hidden sm:inline text-primary-light dark:text-primary-dark">
                 OneDrive Explorer
               </span>
             </Link>

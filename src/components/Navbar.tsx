@@ -40,7 +40,7 @@ const NavItem: React.FC<NavItemProps> = ({
     <motion.li
       whileHover={{ scale: isMobile ? 1 : 1.05 }}
       whileTap={{ scale: isMobile ? 0.98 : 0.95 }}
-      className={isMobile ? "w-full" : ""}
+      className={`${isMobile ? "w-full" : ""} mb-2 md:mb-0`}
     >
       <Link
         href={href}
@@ -48,7 +48,7 @@ const NavItem: React.FC<NavItemProps> = ({
           isActive
             ? "bg-primary-light/20 dark:bg-primary-dark/20 text-primary-light dark:text-primary-dark font-semibold"
             : "hover:bg-primary-light/10 dark:hover:bg-primary-dark/10 text-text-light dark:text-text-dark hover:text-primary-light dark:hover:text-primary-dark"
-        } ${isMobile ? "w-full justify-start text-sm font-semibold text-primary-light dark:text-primary-dark" : ""}`}
+        } ${isMobile ? "w-full justify-start text-base font-semibold text-primary-light dark:text-primary-dark" : ""}`}
         target={target}
         onClick={onClick}
       >
@@ -172,7 +172,7 @@ const NavBar: React.FC = () => {
       <div className="md:hidden">
         <button
           onClick={toggleMenu}
-          className="text-text-light dark:text-text-dark hover:text-primary-light dark:hover:text-primary-dark p-2"
+          className="text-text-light dark:text-text-dark hover:text-primary-light dark:hover:text-primary-dark p-2 focus:outline-none focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark rounded-md"
         >
           {isMenuOpen ? (
             <XIcon className="w-6 h-6" />
@@ -189,9 +189,9 @@ const NavBar: React.FC = () => {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
-            className="md:hidden absolute top-16 left-0 right-0 bg-background-light dark:bg-background-dark shadow-lg overflow-hidden"
+            className="md:hidden absolute top-16 left-0 right-0 bg-background-light dark:bg-background-dark shadow-lg overflow-hidden z-50"
           >
-            <ul className="px-2 py-3 space-y-2">
+            <ul className="px-4 py-4 space-y-3">
               {navItems.map((item) => (
                 <NavItem
                   key={item.href}
@@ -209,8 +209,9 @@ const NavBar: React.FC = () => {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={handleLogout}
+                  className="w-full"
                 >
-                  <button className="flex items-center space-x-2 px-3 py-2 rounded-md transition-colors hover:bg-primary-light/10 dark:hover:bg-primary-dark/10 text-text-light dark:text-text-dark hover:text-primary-light dark:hover:text-primary-dark">
+                  <button className="flex items-center space-x-2 px-3 py-2 rounded-md transition-colors hover:bg-primary-light/10 dark:hover:bg-primary-dark/10 text-text-light dark:text-text-dark hover:text-primary-light dark:hover:text-primary-dark w-full justify-start text-base font-semibold">
                     <LogoutIcon className="w-5 h-5 flex-shrink-0" />
                     <span>Logout</span>
                   </button>
