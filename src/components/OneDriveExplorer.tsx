@@ -80,6 +80,18 @@ export default function OneDriveExplorer({
     }
   }, [tokens, router]);
 
+  const sendRefreshTokenRequest = useCallback(async () => {
+    const response = await fetch("/api/onedrive");
+    if (response.ok) {
+      toast.success("Token refreshed successfully.");
+    } else {
+      toast.error("Failed to refresh token. Redirecting to login page...");
+      setTimeout(() => {
+        router.push("/login");
+      }, 500);
+    }
+  }, [router]);
+
   const fetchItems = useCallback(
     async (path: string) => {
       if (!tokens?.accessToken) return;
@@ -97,9 +109,13 @@ export default function OneDriveExplorer({
         }
       } catch (error) {
         if (error instanceof TokenExpiredError) {
-          toast.error("Your session has expired. Please relogin.");
+          toast.error("Session has expired. Trying token refresh...");
+          await sendRefreshTokenRequest();
         } else {
-          toast.error("An error occurred while fetching items.");
+          toast.error(
+            "An error occurred while fetching items. Trying to refresh token...",
+          );
+          await sendRefreshTokenRequest();
           console.error("Error fetching items:", error);
           setPathNotFound(true);
           onPathNotFound?.(); // Call the callback if provided
@@ -109,7 +125,7 @@ export default function OneDriveExplorer({
         setIsInitialLoad(false);
       }
     },
-    [tokens?.accessToken, onPathNotFound],
+    [tokens?.accessToken, onPathNotFound, sendRefreshTokenRequest],
   );
 
   useEffect(() => {
