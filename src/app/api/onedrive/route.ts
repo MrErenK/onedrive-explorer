@@ -5,7 +5,23 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 
-async function RefreshToken(refreshToken: string) {
+// Create a simple in-memory cache
+const cache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+async function getCachedOrFetch(key: string, fetchFn: () => Promise<any>) {
+  if (cache.has(key)) {
+    const { data, timestamp } = cache.get(key);
+    if (Date.now() - timestamp < CACHE_TTL) {
+      return data;
+    }
+  }
+  const data = await fetchFn();
+  cache.set(key, { data, timestamp: Date.now() });
+  return data;
+}
+
+async function refreshToken(refreshToken: string) {
   console.log("Refreshing token...");
   const response = await fetch(
     `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID}/oauth2/v2.0/token`,
@@ -29,6 +45,7 @@ async function RefreshToken(refreshToken: string) {
   }
 
   await prisma.tokens.updateMany({
+    where: {},
     data: {
       accessToken: data.access_token,
       refreshToken: data.refresh_token,
@@ -60,6 +77,7 @@ export async function GET(request: Request) {
   const path = searchParams.get("path") || "";
   const action = searchParams.get("action");
   const itemId = searchParams.get("itemId");
+
   try {
     let tokens = await getServerTokens();
     if (!tokens) {
@@ -67,8 +85,7 @@ export async function GET(request: Request) {
     }
 
     if (Date.now() > tokens.expiresAt.getTime() - 5000) {
-      // Refresh if within 5 seconds of expiration
-      tokens = await RefreshToken(tokens.refreshToken);
+      tokens = await refreshToken(tokens.refreshToken);
     }
 
     const { accessToken } = tokens;
@@ -83,6 +100,7 @@ export async function GET(request: Request) {
         }
         const downloadUrl = await downloadFile(accessToken, path);
         return NextResponse.redirect(downloadUrl);
+
       case "item":
         if (!itemId && !path) {
           return NextResponse.json(
@@ -90,12 +108,19 @@ export async function GET(request: Request) {
             { status: 400 },
           );
         }
-        const item = itemId
-          ? await getDriveItem(accessToken, itemId)
-          : await getDriveItem(accessToken, path);
+        const itemKey = `item:${itemId || path}`;
+        const item = await getCachedOrFetch(itemKey, () =>
+          itemId
+            ? getDriveItem(accessToken, itemId)
+            : getDriveItem(accessToken, path),
+        );
         return NextResponse.json(item);
+
       default:
-        const contents = await getDriveContents(accessToken, path);
+        const contentsKey = `contents:${path}`;
+        const contents = await getCachedOrFetch(contentsKey, () =>
+          getDriveContents(accessToken, path),
+        );
         return NextResponse.json({ files: contents });
     }
   } catch (error: any) {
