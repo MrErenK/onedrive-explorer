@@ -6,6 +6,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 
 async function RefreshToken(refreshToken: string) {
+  console.log("Refreshing token...");
   const response = await fetch(
     `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID}/oauth2/v2.0/token`,
     {
@@ -23,6 +24,7 @@ async function RefreshToken(refreshToken: string) {
   const data = await response.json();
 
   if (!response.ok) {
+    console.error("Failed to refresh token.");
     throw new Error("Failed to refresh token");
   }
 
@@ -33,6 +35,11 @@ async function RefreshToken(refreshToken: string) {
       expiresAt: new Date(Date.now() + data.expires_in * 1000),
     },
   });
+
+  console.log(
+    "Token refreshed, new expiration:",
+    new Date(Date.now() + data.expires_in * 1000),
+  );
 
   return {
     accessToken: data.access_token,
