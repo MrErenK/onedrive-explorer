@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+"use client";
+import React, { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FolderIcon,
@@ -38,13 +39,20 @@ export const DriveItemList: React.FC<DriveItemListProps> = ({
     }
     return true;
   });
+  const [isChanging, setIsChanging] = useState(false);
 
   useEffect(() => {
     // Save the current view preference to localStorage whenever it changes
     localStorage.setItem("fileViewPreference", isListView ? "list" : "grid");
   }, [isListView]);
 
-  const toggleView = () => setIsListView(!isListView);
+  const toggleView = useCallback(() => {
+    if (!isChanging) {
+      setIsChanging(true);
+      setIsListView((prevView) => !prevView);
+      setTimeout(() => setIsChanging(false), 500); // Debounce for 500ms
+    }
+  }, [isChanging]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

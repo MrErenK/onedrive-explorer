@@ -36,7 +36,10 @@ const LoadingBar: React.FC<LoadingBarProps> = ({ className }) => {
 
   return (
     <motion.div
-      className={cn("fixed top-0 left-0 right-0 h-1 bg-primary-light dark:bg-primary-dark z-50", className)}
+      className={cn(
+        "fixed top-0 left-0 right-0 h-1 bg-primary-light dark:bg-primary-dark z-50",
+        className,
+      )}
       style={{ width: `${progress}%` }}
       animate={controls}
     />

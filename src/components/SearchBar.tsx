@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useEffect } from "react";
 import { SearchIcon } from "@/components/Icons";
 import useDebounce from "@/hooks/useDebounce";

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import { formatFileSize, getFileExtension } from "@/utils/fileUtils";
 import Link from "next/link";
@@ -23,6 +23,7 @@ export default function FilePage() {
   const [fileDetails, setFileDetails] = useState<FileDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isCopying, setIsCopying] = useState(false);
 
   const filePath = Array.isArray(params.filename)
     ? params.filename.join("/")
@@ -56,14 +57,20 @@ export default function FilePage() {
     );
   };
 
-  const handleCopyLink = () => {
-    navigator.clipboard
-      .writeText(
-        `${process.env.NEXT_PUBLIC_APP_URL}/api/onedrive?action=download&path=${encodeURIComponent(filePath)}`,
-      )
-      .then(() => toast.success("Link copied to clipboard"))
-      .catch((err) => toast.error("Failed to copy link"));
-  };
+  const handleCopyLink = useCallback(() => {
+    if (!isCopying) {
+      setIsCopying(true);
+      navigator.clipboard
+        .writeText(
+          `${process.env.NEXT_PUBLIC_APP_URL}/api/onedrive?action=download&path=${encodeURIComponent(filePath)}`,
+        )
+        .then(() => toast.success("Link copied to clipboard"))
+        .catch((err) => toast.error("Failed to copy link"))
+        .finally(() => {
+          setTimeout(() => setIsCopying(false), 500); // Debounce for 500ms
+        });
+    }
+  }, [isCopying, filePath]);
 
   if (isLoading)
     return (
@@ -140,6 +147,7 @@ export default function FilePage() {
           <button
             onClick={handleCopyLink}
             className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-bold py-2 px-4 rounded transition-colors duration-200"
+            disabled={isCopying}
           >
             Copy Link
           </button>
