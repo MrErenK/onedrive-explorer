@@ -84,13 +84,14 @@ export default function OneDriveExplorer({
     const response = await fetch("/api/onedrive");
     if (response.ok) {
       toast.success("Token refreshed successfully.");
+      router.push(currentPath);
     } else {
       toast.error("Failed to refresh token. Redirecting to login page...");
       setTimeout(() => {
         router.push("/login");
       }, 500);
     }
-  }, [router]);
+  }, [router, currentPath]);
 
   const fetchItems = useCallback(
     async (path: string) => {
