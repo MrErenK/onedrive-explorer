@@ -61,6 +61,13 @@ async function refreshToken(refreshToken: string) {
 }
 
 export async function GET(request: Request) {
+  let tokens = await getServerTokens();
+  if (!tokens) {
+    throw new Error("Failed to retrieve server tokens");
+  }
+  if (Date.now() > tokens.expiresAt.getTime() - 5000) {
+    tokens = await refreshToken(tokens.refreshToken);
+  }
   const session = await getServerSession(authOptions);
   if (!session || !session.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -74,15 +81,6 @@ export async function GET(request: Request) {
   const itemId = searchParams.get("itemId");
 
   try {
-    let tokens = await getServerTokens();
-    if (!tokens) {
-      throw new Error("Failed to retrieve server tokens");
-    }
-
-    if (Date.now() > tokens.expiresAt.getTime() - 5000) {
-      tokens = await refreshToken(tokens.refreshToken);
-    }
-
     const { accessToken } = tokens;
 
     switch (action) {
