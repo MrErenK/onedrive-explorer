@@ -119,3 +119,21 @@ export async function downloadFile(accessToken: string, path: string) {
     throw error;
   }
 }
+
+export async function uploadFile(
+  accessToken: string,
+  filePath: string,
+  fileContent: ArrayBuffer,
+) {
+  const client = initClient(accessToken);
+
+  try {
+    const response = await client
+      .api(`/me/drive/root:/${filePath}:/content`)
+      .put(fileContent);
+    return response;
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    throw error;
+  }
+}

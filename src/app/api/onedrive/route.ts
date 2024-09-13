@@ -1,19 +1,24 @@
 import { NextResponse } from "next/server";
-import { getDriveContents, getDriveItem, downloadFile } from "@/lib/graph";
+import {
+  getDriveContents,
+  getDriveItem,
+  downloadFile,
+  uploadFile,
+} from "@/lib/graph";
 import { getServerTokens } from "@/lib/getServerTokens";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 
 // Create a simple in-memory cache
-const cache = new Map();
+const cache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 async function getCachedOrFetch(key: string, fetchFn: () => Promise<any>) {
   if (cache.has(key)) {
-    const { data, timestamp } = cache.get(key);
-    if (Date.now() - timestamp < CACHE_TTL) {
-      return data;
+    const cacheEntry = cache.get(key);
+    if (cacheEntry && Date.now() - cacheEntry.timestamp < CACHE_TTL) {
+      return cacheEntry.data;
     }
   }
   const data = await fetchFn();
@@ -69,7 +74,7 @@ export async function GET(request: Request) {
     tokens = await refreshToken(tokens.refreshToken);
   }
   const session = await getServerSession(authOptions);
-  if (!session || !session.user) {
+  if (!session || !session.user || !session.user.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -79,11 +84,62 @@ export async function GET(request: Request) {
   const path = searchParams.get("path") || "";
   const action = searchParams.get("action");
   const itemId = searchParams.get("itemId");
+  const apiKey = request.headers.get("x-api-key");
 
   try {
     const { accessToken } = tokens;
 
     switch (action) {
+      case "upload": {
+        if (!apiKey) {
+          return NextResponse.json(
+            { error: "API key is required for upload" },
+            { status: 400 },
+          );
+        }
+
+        const key = await prisma.apiKey.findUnique({
+          where: { key: apiKey },
+          select: { key: true },
+        });
+
+        if (!key || key.key !== apiKey) {
+          return NextResponse.json(
+            { error: "Invalid API key" },
+            { status: 401 },
+          );
+        }
+
+        try {
+          const { accessToken } = tokens;
+          const formData = await request.formData();
+          const file = formData.get("file") as File;
+
+          if (!file) {
+            return NextResponse.json(
+              { error: "No file provided" },
+              { status: 400 },
+            );
+          }
+
+          const buffer = await file.arrayBuffer();
+          const filePath = `${path}/${file.name}`;
+
+          const uploadResult = await uploadFile(accessToken, filePath, buffer);
+
+          return NextResponse.json({
+            message: "File uploaded successfully",
+            uploadResult,
+          });
+        } catch (error: any) {
+          console.error("Error in file upload:", error);
+          return NextResponse.json(
+            { error: error.message || "Failed to upload file" },
+            { status: error.statusCode || 500 },
+          );
+        }
+      }
+
       case "download":
         if (!path) {
           return NextResponse.json(
@@ -122,7 +178,16 @@ export async function GET(request: Request) {
         const contents = await getCachedOrFetch(contentsKey, () =>
           getDriveContents(accessToken, path),
         );
-        return NextResponse.json({ files: contents });
+        const totalFileSize = contents.reduce(
+          (sum: number, file: { size?: number }) => sum + (file.size ?? 0),
+          0,
+        );
+        const totalFileCount = contents.length;
+        return NextResponse.json({
+          files: contents,
+          totalFileSize,
+          totalFileCount,
+        });
     }
   } catch (error: any) {
     console.error("Error in OneDrive API:", error);

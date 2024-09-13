@@ -15,3 +15,10 @@ model tokens {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+
+model apiKey {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
