@@ -63,7 +63,7 @@ async function refreshToken(refreshToken: string) {
 export async function GET(request: Request) {
   let tokens = await getServerTokens();
   if (!tokens) {
-    throw new Error("Failed to retrieve server tokens");
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   if (Date.now() > tokens.expiresAt.getTime() - 5000) {
     tokens = await refreshToken(tokens.refreshToken);
