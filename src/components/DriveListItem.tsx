@@ -80,6 +80,14 @@ export const DriveItemList: React.FC<DriveItemListProps> = ({
 
   const folderCount = items.filter((item) => item.folder).length;
   const fileCount = items.length - folderCount;
+  const totalSize = items.reduce((sum, item) => sum + item.size, 0);
+  const totalFileCount = items.reduce((sum, item) => {
+    if (item.folder) {
+      return sum + (item.folder.childCount || 0);
+    } else {
+      return sum + 1;
+    }
+  }, 0);
 
   const sortItems = (a: DriveItem, b: DriveItem) => {
     if (a.folder && !b.folder) return -1;
@@ -117,7 +125,7 @@ export const DriveItemList: React.FC<DriveItemListProps> = ({
           <span className="font-medium">{folderCount.toLocaleString()}</span>{" "}
           folder{folderCount !== 1 ? "s" : ""},{" "}
           <span className="font-medium">{fileCount.toLocaleString()}</span> file
-          {fileCount !== 1 ? "s" : ""}
+          {fileCount !== 1 ? "s" : ""} <br />
         </div>
         <motion.button
           onClick={toggleView}
@@ -279,8 +287,10 @@ export const DriveItemList: React.FC<DriveItemListProps> = ({
             </motion.div>
           </AnimatePresence>
         )}
-        ;
       </AnimatePresence>
+      <div className="mt-4 text-secondary-light dark:text-secondary-dark text-sm">
+        Total size: {formatFileSize(totalSize)} | Total files: {totalFileCount}
+      </div>
     </div>
   );
 };

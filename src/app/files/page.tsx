@@ -47,7 +47,7 @@ export default function OneDrivePage() {
           transition={{ duration: 0.5 }}
           className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary-light dark:text-primary-dark mb-6 sm:mb-8 md:mb-10 text-center"
         >
-          OneDrive Explorer
+          Halcyon Builds
         </motion.h1>
         <AnimatePresence mode="wait">
           {isLoading ? (
