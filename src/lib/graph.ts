@@ -128,9 +128,16 @@ export async function uploadFile(
   const client = initClient(accessToken);
 
   try {
-    const response = await client
-      .api(`/me/drive/root:/${filePath}:/content`)
-      .put(fileContent);
+    let apiPath;
+    if (filePath.startsWith("/")) {
+      // Upload to root
+      apiPath = `/me/drive/root/children/${encodeURIComponent(filePath.slice(1))}/content`;
+    } else {
+      // Upload to a specific path
+      apiPath = `/me/drive/root:/${filePath}:/content`;
+    }
+
+    const response = await client.api(apiPath).put(fileContent);
     return response;
   } catch (error) {
     console.error("Error uploading file:", error);

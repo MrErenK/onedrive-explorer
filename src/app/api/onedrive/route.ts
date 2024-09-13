@@ -26,7 +26,7 @@ async function getCachedOrFetch(key: string, fetchFn: () => Promise<any>) {
   return data;
 }
 
-async function refreshToken(refreshToken: string) {
+export async function refreshToken(refreshToken: string) {
   console.log("Refreshing token...");
   const response = await fetch(
     `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID}/oauth2/v2.0/token`,
@@ -90,56 +90,6 @@ export async function GET(request: Request) {
     const { accessToken } = tokens;
 
     switch (action) {
-      case "upload": {
-        if (!apiKey) {
-          return NextResponse.json(
-            { error: "API key is required for upload" },
-            { status: 400 },
-          );
-        }
-
-        const key = await prisma.apiKey.findUnique({
-          where: { key: apiKey },
-          select: { key: true },
-        });
-
-        if (!key || key.key !== apiKey) {
-          return NextResponse.json(
-            { error: "Invalid API key" },
-            { status: 401 },
-          );
-        }
-
-        try {
-          const { accessToken } = tokens;
-          const formData = await request.formData();
-          const file = formData.get("file") as File;
-
-          if (!file) {
-            return NextResponse.json(
-              { error: "No file provided" },
-              { status: 400 },
-            );
-          }
-
-          const buffer = await file.arrayBuffer();
-          const filePath = `${path}/${file.name}`;
-
-          const uploadResult = await uploadFile(accessToken, filePath, buffer);
-
-          return NextResponse.json({
-            message: "File uploaded successfully",
-            uploadResult,
-          });
-        } catch (error: any) {
-          console.error("Error in file upload:", error);
-          return NextResponse.json(
-            { error: error.message || "Failed to upload file" },
-            { status: error.statusCode || 500 },
-          );
-        }
-      }
-
       case "download":
         if (!path) {
           return NextResponse.json(
