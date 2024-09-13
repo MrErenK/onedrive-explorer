@@ -13,6 +13,26 @@ function isAuthorized(request: NextRequest): boolean {
   return authHeader === process.env.ADMIN_API_KEY;
 }
 
+export async function GET(request: NextRequest) {
+  if (!isAuthorized(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const apiKeys = await prisma.apiKey.findMany({
+      select: { id: true, key: true },
+    });
+
+    return NextResponse.json(apiKeys, { status: 200 });
+  } catch (error) {
+    console.error("Error fetching API keys:", error);
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 },
+    );
+  }
+}
+
 export async function POST(request: NextRequest) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
