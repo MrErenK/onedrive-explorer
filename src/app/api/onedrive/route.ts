@@ -26,7 +26,7 @@ async function getCachedOrFetch(key: string, fetchFn: () => Promise<any>) {
   return data;
 }
 
-export async function refreshToken(refreshToken: string) {
+async function refreshToken(refreshToken: string) {
   console.log("Refreshing token...");
   const response = await fetch(
     `https://login.microsoftonline.com/${process.env.AZURE_AD_TENANT_ID}/oauth2/v2.0/token`,
