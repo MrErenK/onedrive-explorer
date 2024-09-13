@@ -11,11 +11,15 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { accessToken } = await getServerTokens();
+    const tokens = await getServerTokens();
+    const accessToken = tokens?.accessToken;
+    if (!accessToken) {
+      throw new Error("Access token not available");
+    }
     const file = await downloadFile(accessToken, path);
     return new NextResponse(file, {
       headers: {
-        "Content-Disposition": `attachment; filename="${path.split("/").pop()}"`,
+        "Content-Disposition": `attachment; filename="${path.split("/").pop() || "file"}"`,
       },
     });
   } catch (error) {
