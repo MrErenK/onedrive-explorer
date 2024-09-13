@@ -66,12 +66,6 @@ export default function OneDriveExplorer({
         }
       } catch (error) {
         console.error("Failed to fetch tokens:", error);
-        toast.error(
-          "Failed to fetch authentication tokens. Please try logging in again. Redirecting to login page...",
-        );
-        setTimeout(() => {
-          router.push("/login");
-        }, 500);
       }
     }
 
@@ -84,14 +78,9 @@ export default function OneDriveExplorer({
     const response = await fetch("/api/onedrive");
     if (response.ok) {
       toast.success("Token refreshed successfully.");
-      router.push(currentPath);
-    } else {
-      toast.error("Failed to refresh token. Redirecting to login page...");
-      setTimeout(() => {
-        router.push("/login");
-      }, 500);
+      router.refresh();
     }
-  }, [router, currentPath]);
+  }, [router]);
 
   const fetchItems = useCallback(
     async (path: string) => {

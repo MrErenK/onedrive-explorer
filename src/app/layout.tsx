@@ -14,8 +14,8 @@ const Header = dynamic(() => import("@/components/Header"), { ssr: false });
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "OneDrive Explorer",
-  description: "Browse and search your OneDrive files",
+  title: "Halcyon Project Drive",
+  description: "Official halcyon project storage website.",
   icons: {
     apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
     icon: [
@@ -33,9 +33,9 @@ export const metadata: Metadata = {
     ],
   },
   appleWebApp: {
-    title: "OneDrive Explorer",
+    title: "Halcyon Project Drive",
   },
-  applicationName: "OneDrive Explorer",
+  applicationName: "Halcyon Project Drive",
   other: {
     "msapplication-TileColor": "#da532c",
     "msapplication-config": "/icons/browserconfig.xml",

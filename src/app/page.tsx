@@ -18,7 +18,7 @@ export default function Home() {
           transition={{ delay: 0.2, duration: 0.3 }}
           className="text-4xl sm:text-5xl md:text-6xl font-bold text-primary-light dark:text-primary-dark mb-6 leading-tight"
         >
-          Welcome to OneDrive Explorer
+          Welcome to Halcyon Project Storage
         </motion.h1>
         <motion.p
           initial={{ opacity: 0 }}
@@ -26,8 +26,8 @@ export default function Home() {
           transition={{ delay: 0.4, duration: 0.5 }}
           className="text-lg sm:text-xl md:text-2xl text-secondary-light dark:text-secondary-dark mb-10 leading-relaxed"
         >
-          Effortlessly browse and search OneDrive files with our intuitive
-          interface.
+          Explore Halcyon Project builds with ease. Download the latest builds
+          for your device.
         </motion.p>
         <motion.div
           whileHover={{ scale: 1.05 }}
@@ -38,7 +38,7 @@ export default function Home() {
             href="/files"
             className="bg-primary-light dark:bg-primary-dark text-primary-dark dark:text-primary-light font-semibold py-3 px-8 rounded-full inline-block transition-all duration-300 shadow-lg hover:shadow-xl hover:bg-primary-light/90 dark:hover:bg-primary-dark/90 text-lg"
           >
-            Explore OneDrive
+            Get Builds
           </Link>
         </motion.div>
       </motion.div>

@@ -40,7 +40,7 @@ const Header = () => {
           >
             <Link href="/">
               <span className="text-sm md:text-base font-bold hidden sm:inline text-primary-light dark:text-primary-dark">
-                OneDrive Explorer
+                Halcyon Project
               </span>
             </Link>
           </motion.div>
