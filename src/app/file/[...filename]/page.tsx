@@ -26,8 +26,8 @@ export default function FilePage() {
   const [isCopying, setIsCopying] = useState(false);
 
   const filePath = Array.isArray(params.filename)
-    ? params.filename.join("/")
-    : params.filename;
+    ? `/${params.filename.join("/")}`
+    : `/${params.filename}`;
 
   useEffect(() => {
     const fetchFileDetails = async () => {
@@ -67,7 +67,7 @@ export default function FilePage() {
         .then(() => toast.success("Link copied to clipboard"))
         .catch((err) => toast.error("Failed to copy link"))
         .finally(() => {
-          setTimeout(() => setIsCopying(false), 500); // Debounce for 500ms
+          setTimeout(() => setIsCopying(false), 500);
         });
     }
   }, [isCopying, filePath]);
@@ -97,8 +97,9 @@ export default function FilePage() {
       </div>
     );
 
-  const parentPath = filePath.split("/").slice(0, -1).join("/");
-  const parentName = parentPath.split("/").pop() || "Files";
+  const parentPath = filePath.split("/").slice(0, -1).join("/") || "/";
+  const parentName =
+    parentPath === "/" ? "Files" : parentPath.split("/").pop() || "Files";
 
   return (
     <div className="container mx-auto px-4 py-8">

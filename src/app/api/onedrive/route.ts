@@ -102,12 +102,20 @@ export async function GET(request: Request) {
           );
         }
         const itemKey = `item:${itemId || path}`;
-        const item = await getCachedOrFetch(itemKey, () =>
-          itemId
-            ? getDriveItem(accessToken, itemId)
-            : getDriveItem(accessToken, path),
-        );
-        return NextResponse.json(item);
+        try {
+          const item = await getCachedOrFetch(itemKey, () =>
+            itemId
+              ? getDriveItem(accessToken, itemId)
+              : getDriveItem(accessToken, path),
+          );
+          return NextResponse.json(item);
+        } catch (itemError: any) {
+          console.error("Error fetching item details:", itemError);
+          return NextResponse.json(
+            { error: "Failed to load file details" },
+            { status: itemError.statusCode || 404 },
+          );
+        }
 
       default:
         const contentsKey = `contents:${path}`;
