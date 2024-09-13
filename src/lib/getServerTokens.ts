@@ -6,7 +6,7 @@ export async function getServerTokens() {
   const tokens = await prisma.tokens.findFirst();
 
   if (!tokens) {
-    throw new Error("No tokens found");
+    return null;
   }
 
   return {
