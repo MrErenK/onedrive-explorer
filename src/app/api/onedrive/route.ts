@@ -1,10 +1,5 @@
 import { NextResponse } from "next/server";
-import {
-  getDriveContents,
-  getDriveItem,
-  downloadFile,
-  uploadFile,
-} from "@/lib/graph";
+import { getDriveContents, getDriveItem, downloadFile } from "@/lib/graph";
 import { getServerTokens } from "@/lib/getServerTokens";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
