@@ -6,7 +6,10 @@ import { prisma } from "@/lib/prisma";
 export async function GET() {
   const tokens = await prisma.tokens.findFirst();
   const isLoggedIn = !!tokens;
-  return NextResponse.json({ isLoggedIn });
+  return new NextResponse(JSON.stringify({ isLoggedIn }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 export async function POST() {
@@ -14,7 +17,10 @@ export async function POST() {
   const session = await getServerSession(authOptions);
 
   if (!session) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    return new NextResponse(JSON.stringify({ message: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   try {
@@ -24,15 +30,21 @@ export async function POST() {
         id: session.user.id,
       },
     });
-    return NextResponse.json(
-      { message: "Logged out successfully" },
-      { status: 200 },
+    return new NextResponse(
+      JSON.stringify({ message: "Logged out successfully" }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      },
     );
   } catch (error) {
     console.error("Error during logout:", error);
-    return NextResponse.json(
-      { message: "An error occurred during logout" },
-      { status: 500 },
+    return new NextResponse(
+      JSON.stringify({ message: "An error occurred during logout" }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      },
     );
   }
 }

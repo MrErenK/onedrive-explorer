@@ -68,9 +68,7 @@ const NavBar: React.FC = () => {
   useEffect(() => {
     const checkLoginStatus = async () => {
       try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_APP_URL}/api/log-utils`,
-        );
+        const response = await fetch("/api/log-utils");
         const data = await response.json();
         setIsLoggedIn(data.isLoggedIn);
       } catch (error) {
