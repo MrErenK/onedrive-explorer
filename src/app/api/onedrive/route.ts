@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { getDriveContents, getDriveItem, downloadFile } from "@/lib/graph";
 import { getServerTokens } from "@/lib/getServerTokens";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
 
 // Create a simple in-memory cache
 const cache = new Map();
@@ -68,12 +66,6 @@ export async function GET(request: Request) {
   if (Date.now() > tokens.expiresAt.getTime() - 5000) {
     tokens = await refreshToken(tokens.refreshToken);
   }
-  const session = await getServerSession(authOptions);
-  if (!session || !session.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const userId = session.user.id;
 
   const { searchParams } = new URL(request.url);
   const path = searchParams.get("path") || "";
