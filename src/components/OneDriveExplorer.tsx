@@ -75,7 +75,7 @@ export default function OneDriveExplorer({
   }, [tokens, router]);
 
   const sendRefreshTokenRequest = useCallback(async () => {
-    const response = await fetch("/api/onedrive");
+    const response = await fetch("/api/refresh");
     if (response.ok) {
       toast.success("Token refreshed successfully.");
       router.push("/");
