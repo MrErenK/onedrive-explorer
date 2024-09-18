@@ -78,7 +78,8 @@ export default function OneDriveExplorer({
     const response = await fetch("/api/onedrive");
     if (response.ok) {
       toast.success("Token refreshed successfully.");
-      router.refresh();
+      router.push("/");
+      router.push("/files");
     }
   }, [router]);
 
@@ -203,7 +204,7 @@ export default function OneDriveExplorer({
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           className="px-4 py-2 bg-primary-light dark:bg-primary-dark text-primary-dark dark:text-primary-light rounded-md shadow-md hover:bg-primary-light/90 dark:hover:bg-primary-dark/90 transition-colors duration-200"
-          onClick={() => router.replace("/files")}
+          onClick={() => router.push("/")}
         >
           Go Home
         </motion.button>
