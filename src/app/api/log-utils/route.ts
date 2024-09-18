@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getServerTokens } from "@/lib/getServerTokens";
 
 export async function GET() {
-  const tokens = await prisma.tokens.findFirst();
+  const tokens = await getServerTokens();
   const isLoggedIn = !!tokens;
   return new NextResponse(JSON.stringify({ isLoggedIn }), {
     status: 200,
