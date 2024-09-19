@@ -2,7 +2,6 @@ import express from "express";
 import next from "next";
 import { NextServer } from "next/dist/server/next";
 import busboy from "busboy";
-import { Readable } from "stream";
 import {
   checkFileExists,
   UploadHandler,
@@ -10,6 +9,7 @@ import {
 } from "./uploadHandler";
 import { getServerTokens } from "./src/lib/getServerTokens";
 import { prisma } from "./src/lib/prisma";
+import { Readable, PassThrough } from "stream";
 
 const dev = process.env.NODE_ENV !== "production";
 const app: NextServer = next({ dev });
@@ -46,9 +46,10 @@ app.prepare().then(async () => {
   server.post("/api/upload", checkApiKey, async (req, res) => {
     const bb = busboy({ headers: req.headers });
     let fileName: string = "";
-    let fileSize: number = 0;
     let mimeType: string = "";
     const uploadPath = req.query.path as string;
+    const silent = req.query.silent === "true";
+    let uploader: UploadHandler | null = null;
 
     if (!uploadPath) {
       return res.status(400).json({ error: "Upload path is required" });
@@ -58,72 +59,84 @@ app.prepare().then(async () => {
       fileName = info.filename;
       mimeType = info.mimeType;
 
-      // Initialize fileSize to 0
-      fileSize = 0;
+      try {
+        let tokens = await getServerTokens();
+        if (!tokens) {
+          res.status(401).json({ error: "Unauthorized" });
+          return;
+        }
 
-      // Calculate file size and collect file data
-      const chunks: Buffer[] = [];
-      file.on("data", (data) => {
-        chunks.push(data);
-        fileSize += data.length;
-      });
+        const { accessToken } = tokens;
 
-      file.on("end", async () => {
-        try {
-          let tokens = await getServerTokens();
-          if (!tokens) {
-            res.status(401).json({ error: "Unauthorized" });
-            return;
-          }
+        const fileExists = await checkFileExists(
+          accessToken,
+          uploadPath === "/" ? "" : uploadPath,
+          fileName,
+        );
 
-          const { accessToken } = tokens;
+        if (fileExists) {
+          res
+            .status(409)
+            .json({ error: "File already exists in the destination folder" });
+          return;
+        }
 
-          const fileExists = await checkFileExists(
-            accessToken,
-            uploadPath,
-            fileName,
-          );
-          if (fileExists) {
-            res
-              .status(409)
-              .json({ error: "File already exists in the destination folder" });
-            return;
-          }
+        // Calculate file size while streaming
+        let fileSize = 0;
+        const chunks: Buffer[] = [];
 
-          res.writeHead(200, {
-            "Content-Type": "text/plain",
-            "Transfer-Encoding": "chunked",
-          });
+        for await (const chunk of file) {
+          fileSize += chunk.length;
+          chunks.push(chunk);
+        }
 
+        console.log(`File size calculated: ${fileSize} bytes`);
+
+        // Create a new readable stream from the accumulated chunks
+        const resetableStream = new Readable({
+          read() {
+            chunks.forEach((chunk) => this.push(chunk));
+            this.push(null);
+          },
+        });
+
+        res.writeHead(200, {
+          "Content-Type": "text/plain",
+          "Transfer-Encoding": "chunked",
+        });
+
+        if (!silent) {
           res.write(`Starting upload of ${fileName} to ${uploadPath}\n`);
+        }
 
-          // Create a new readable stream from the collected chunks
-          const fileBuffer = Buffer.concat(chunks);
-          const fileStream = new Readable();
-          fileStream.push(fileBuffer);
-          fileStream.push(null);
+        uploader = new UploadHandler(
+          accessToken,
+          resetableStream,
+          fileName,
+          fileSize,
+          mimeType,
+          uploadPath,
+        );
 
-          const uploader = new UploadHandler(
-            accessToken,
-            fileStream,
-            fileName,
-            fileSize,
-            mimeType,
-            uploadPath,
-          );
-
-          uploader.on("progress", (progress: UploadProgress) => {
+        uploader.on("progress", (progress: UploadProgress) => {
+          if (!silent) {
             res.write(`Progress: ${progress.percentage.toFixed(2)}%\n`);
-          });
+          }
+        });
 
-          uploader.on("canceled", (fileName: string) => {
-            res.write(`Upload of ${fileName} has been canceled or stopped.\n`);
-          });
-
+        try {
           const result = await uploader.upload();
 
-          res.write(`Upload completed for: ${fileName} to ${uploadPath}\n`);
-          res.end(JSON.stringify(result));
+          if (result && result.status === "completed") {
+            res.end(JSON.stringify(result));
+          } else if (result && result.status === "cancelled") {
+            res.write(`Upload cancelled for: ${fileName}\n`);
+            res.end(JSON.stringify(result));
+          } else {
+            throw new Error(
+              `Unexpected upload result: ${JSON.stringify(result)}`,
+            );
+          }
         } catch (error: any) {
           console.error("Upload error:", error);
           res.write(
@@ -133,11 +146,29 @@ app.prepare().then(async () => {
             }),
           );
           res.end();
+        } finally {
+          if (uploader) {
+            uploader.removeAllListeners();
+            uploader = null;
+          }
         }
-      });
+      } catch (error: any) {
+        console.error("Upload error:", error);
+        res.write(
+          JSON.stringify({
+            error: "Upload failed",
+            message: error.message,
+          }),
+        );
+        res.end();
+      }
     });
 
     req.pipe(bb);
+
+    req.on("close", () => {
+      bb.removeAllListeners();
+    });
   });
 
   // Handle all other routes with Next.js
@@ -178,7 +209,16 @@ app.prepare().then(async () => {
   };
 
   try {
-    await startServer(DEFAULT_PORT);
+    const serverInstance = await startServer(DEFAULT_PORT);
+
+    // Garbage collection: Graceful shutdown
+    process.on("SIGTERM", () => {
+      console.log("SIGTERM signal received: closing HTTP server");
+      serverInstance.close(() => {
+        console.log("HTTP server closed");
+        process.exit(0);
+      });
+    });
   } catch (error: any) {
     console.error("Failed to start server:", error);
     process.exit(1);

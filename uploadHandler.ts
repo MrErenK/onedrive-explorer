@@ -1,11 +1,19 @@
 import { Client } from "@microsoft/microsoft-graph-client";
 import { Readable } from "stream";
 import { EventEmitter } from "events";
+import os from "os";
 
-const INITIAL_CHUNK_SIZE = 5 * 1024 * 1024; // 5 MB initial chunk size
-const MIN_CHUNK_SIZE = 1 * 1024 * 1024; // 1 MB minimum chunk size
-const MAX_CHUNK_SIZE = 60 * 1024 * 1024; // 60 MB maximum chunk size
-const SMALL_FILE_THRESHOLD = 4 * 1024 * 1024; // 4 MB threshold for small files
+function calculateChunkSize(): number {
+  const totalMemory = os.totalmem();
+  const baseChunkSize = 25 * 1024 * 1024; // 25 MB base size
+  const desiredChunkSize = Math.floor(totalMemory / (1024 * 1024 * 100)); // 1/100th of total memory
+  const maxChunkSize = 100 * 1024 * 1024; // 200 MB max size
+
+  return Math.min(desiredChunkSize * 1024 * 1024, maxChunkSize);
+}
+
+const CHUNK_SIZE = calculateChunkSize();
+console.log(`Using chunk size: ${(CHUNK_SIZE / (1024 * 1024)).toFixed(2)} MB`);
 
 export interface UploadProgress {
   bytesUploaded: number;
@@ -15,198 +23,342 @@ export interface UploadProgress {
 
 export class UploadHandler extends EventEmitter {
   private client: Client;
-  private uploadSession: any;
   private fullPath: string;
   private bytesUploaded: number = 0;
   private lastProgressUpdate: number = 0;
-  private chunkSize: number = INITIAL_CHUNK_SIZE;
-  private uploadStartTime: number = 0;
+  private uploadUrl: string = "";
+  private isCancelled: boolean = false;
+  private uploadedChunks: Set<number> = new Set();
+  private maxRetries: number = 3;
+  private chunkIndex: number = 0;
 
   constructor(
     private accessToken: string,
-    private fileStream: Readable,
+    private fileStream: NodeJS.ReadableStream,
     private fileName: string,
     private fileSize: number,
     private mimeType: string,
     private uploadPath: string,
   ) {
     super();
-    this.fullPath = `${uploadPath}/${fileName}`;
+    this.fullPath = uploadPath === "/" ? fileName : `${uploadPath}/${fileName}`;
     this.client = Client.init({
       authProvider: (done) => {
         done(null, accessToken);
       },
     });
-    console.log(
-      `UploadHandler initialized with file size: ${this.fileSize} bytes`,
-    );
+    console.log(`UploadHandler initialized for ${this.fileName}`);
   }
 
-  async initializeUpload(): Promise<void> {
-    this.uploadSession = await this.client
-      .api(`/me/drive/root:/${this.fullPath}:/createUploadSession`)
-      .post({});
+  private async getUploadStatus(): Promise<any> {
+    const response = await fetch(this.uploadUrl, { method: "GET" });
+    if (!response.ok) {
+      throw new Error(`Failed to get upload status: ${response.statusText}`);
+    }
+    return response.json();
   }
 
-  async uploadSmallFile(): Promise<any> {
+  private async getFileInfo(): Promise<any> {
+    try {
+      const response = await this.client
+        .api(`/me/drive/root:/${this.fullPath}`)
+        .get();
+      console.log(`File info retrieved:`, response);
+      return response;
+    } catch (error) {
+      console.error("Error getting file info:", error);
+      return null;
+    }
+  }
+
+  private async uploadChunk(
+    chunk: Buffer,
+    index: number,
+    totalChunks: number,
+  ): Promise<any> {
+    const start = index * CHUNK_SIZE;
+    const end = Math.min(start + chunk.length - 1, this.fileSize - 1);
+    const contentRange = `bytes ${start}-${end}/${this.fileSize}`;
+
+    try {
+      const response = await fetch(this.uploadUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Length": chunk.length.toString(),
+          "Content-Range": contentRange,
+        },
+        body: chunk,
+      });
+
+      if (!response.ok) {
+        throw { status: response.status, message: response.statusText };
+      }
+
+      this.bytesUploaded += chunk.length;
+      this.emitProgress();
+
+      return response.status === 202 ? null : response.json();
+    } catch (error) {
+      console.error(
+        `Error uploading chunk ${index + 1}/${totalChunks}: ${(error as Error).message}`,
+      );
+      throw error;
+    }
+  }
+
+  private async initializeUpload(): Promise<void> {
     console.log(
-      `Uploading small file: ${this.fileName} (${this.fileSize} bytes)`,
+      `Initializing upload for: ${this.fullPath} (${this.fileSize} bytes)`,
     );
-    const fileContent = await this.readEntireFile();
-    const response = await this.client
-      .api(`/me/drive/root:/${this.fullPath}:/content`)
-      .put(fileContent);
-    console.log("Small file upload completed");
-    return response;
+    try {
+      const response = await this.client
+        .api(`/me/drive/root:/${this.fullPath}:/createUploadSession`)
+        .post({
+          item: {
+            "@microsoft.graph.conflictBehavior": "replace",
+            name: this.fileName,
+          },
+        });
+
+      if (response && response.uploadUrl) {
+        this.uploadUrl = response.uploadUrl;
+        console.log(`Upload session created for ${this.fileName}`);
+      } else {
+        throw new Error("Failed to obtain upload URL from the response");
+      }
+    } catch (error) {
+      console.error("Error creating upload session:", error);
+      throw new Error("Failed to create upload session");
+    }
+
+    if (!this.uploadUrl) {
+      throw new Error("Failed to obtain upload URL");
+    }
+  }
+
+  private updateUploadedRanges(nextExpectedRanges: string[]): void {
+    this.uploadedChunks.clear();
+    for (const range of nextExpectedRanges) {
+      const [start, end] = range.split("-").map(Number);
+      const startChunk = Math.floor(start / CHUNK_SIZE);
+      const endChunk = Math.floor((end || this.fileSize - 1) / CHUNK_SIZE);
+      for (let i = 0; i < startChunk; i++) {
+        this.uploadedChunks.add(i);
+      }
+    }
   }
 
   async upload(): Promise<any> {
     try {
-      if (this.fileSize <= SMALL_FILE_THRESHOLD) {
-        return await this.uploadSmallFile();
+      console.log(`Starting upload process for ${this.fileName}`);
+      await this.initializeUpload();
+      const uploadStatus = await this.getUploadStatus();
+      this.updateUploadedRanges(uploadStatus.nextExpectedRanges);
+      console.log(`Starting streaming upload for ${this.fileName}`);
+      const uploadResult = await this.streamUpload();
+
+      if (this.isCancelled) {
+        console.log(`Upload cancelled for ${this.fileName}`);
+        await this.cancelUpload();
+        return { status: "cancelled", name: this.fileName };
       }
 
-      await this.initializeUpload();
-      await this.uploadChunks();
+      console.log(`Upload process completed for ${this.fileName}`);
 
-      const uploadedFile = await this.client
-        .api(`/me/drive/root:/${this.fullPath}`)
-        .get();
+      let result = {
+        status: "completed",
+        name: this.fileName,
+        id: uploadResult.id || "unknown",
+        path: this.fullPath,
+      };
+
+      if (result.id === "unknown") {
+        const fileInfo = await this.getFileInfo();
+        if (fileInfo && fileInfo.id) {
+          result.id = fileInfo.id;
+        }
+      }
+
+      if (this.fileName.match(/^[_~]tmp\w{2}_/)) {
+        const newFileName = this.fileName.replace(/^[_~]tmp\w{2}_/, "");
+        console.log(
+          `Attempting to rename file from ${this.fileName} to ${newFileName}`,
+        );
+        if (result.id && result.id !== "unknown") {
+          result = await this.renameFile(result.id, newFileName);
+        } else {
+          console.warn("Unable to rename file: file ID is missing or unknown");
+          result.name = newFileName;
+          result.path =
+            this.uploadPath === "/"
+              ? newFileName
+              : `${this.uploadPath}/${newFileName}`;
+        }
+      }
+
+      return result;
     } catch (error) {
       console.error("Error in upload process:", error);
       throw error;
+    } finally {
+      this.cleanup();
     }
   }
 
-  private async uploadChunk(start: number, end: number): Promise<any> {
-    const isLastChunk = end === this.fileSize;
-    const contentRange = `bytes ${start}-${end - 1}/${this.fileSize}`;
-    const chunkSize = end - start;
+  private async streamUpload(): Promise<any> {
+    console.log(`Starting streaming upload for ${this.fileName}`);
+    const totalChunks = Math.ceil(this.fileSize / CHUNK_SIZE);
+    let finalResponse;
 
-    try {
-      const chunkBuffer = await this.readChunk(start, chunkSize);
+    while (this.chunkIndex < totalChunks) {
+      if (this.isCancelled) break;
 
-      const response = await fetch(this.uploadSession.uploadUrl, {
-        method: "PUT",
-        headers: {
-          "Content-Length": chunkBuffer.length.toString(),
-          "Content-Range": contentRange,
-        },
-        body: chunkBuffer,
-      });
+      if (!this.uploadedChunks.has(this.chunkIndex)) {
+        console.log(
+          `Preparing to upload chunk ${this.chunkIndex + 1}/${totalChunks}`,
+        );
+        try {
+          const chunk = await this.readChunk(CHUNK_SIZE);
+          if (!chunk) {
+            console.log("No more chunks to read, breaking loop");
+            break;
+          }
 
-      if (!response.ok) {
-        throw new Error(
-          `Upload chunk failed: ${response.status} ${response.statusText}`,
+          console.log(`Uploading chunk ${this.chunkIndex + 1}/${totalChunks}`);
+          const response = await this.uploadChunkWithRetry(
+            chunk,
+            this.chunkIndex,
+            totalChunks,
+          );
+          if (
+            response &&
+            (this.chunkIndex === totalChunks - 1 || response.id)
+          ) {
+            finalResponse = response;
+            break;
+          }
+        } catch (error) {
+          console.error(
+            `Error processing chunk ${this.chunkIndex + 1}:`,
+            error,
+          );
+          throw error;
+        }
+      } else {
+        console.log(
+          `Chunk ${this.chunkIndex + 1}/${totalChunks} already uploaded, skipping`,
         );
       }
 
-      const responseData = await response.json();
+      this.chunkIndex++;
+    }
 
-      if (isLastChunk) {
-        if (responseData.size !== undefined) {
+    if (!finalResponse || !finalResponse.id) {
+      console.log(`No final response received, fetching file info`);
+      finalResponse = await this.getFileInfo();
+    }
+
+    console.log(`Streaming upload completed for ${this.fileName}`);
+    return finalResponse || { id: "unknown" };
+  }
+
+  private async uploadChunkWithRetry(
+    chunk: Buffer,
+    index: number,
+    totalChunks: number,
+  ): Promise<any> {
+    let retries = 0;
+    while (retries < this.maxRetries) {
+      try {
+        const response = await this.uploadChunk(chunk, index, totalChunks);
+        this.uploadedChunks.add(index);
+        return response;
+      } catch (error: any) {
+        if (error.status === 416) {
           console.log(
-            `Upload completed. Total size: ${responseData.size} bytes`,
+            `Chunk ${index + 1}/${totalChunks} already uploaded, skipping`,
           );
-        } else {
-          console.log(
-            "Last chunk uploaded, but size not provided in response.",
-          );
+          this.uploadedChunks.add(index);
+          return null;
+        }
+        retries++;
+        console.warn(
+          `Retry ${retries}/${this.maxRetries} for chunk ${index + 1}/${totalChunks}`,
+        );
+        if (retries === this.maxRetries) {
+          throw error;
         }
       }
+    }
+    return null;
+  }
 
-      return responseData;
+  private async renameFile(itemId: string, newName: string): Promise<any> {
+    try {
+      const url = `https://graph.microsoft.com/v1.0/me/drive/items/${itemId}`;
+      const response = await fetch(url, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${this.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name: newName }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to rename file: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log(`File renamed to: ${newName}`);
+      return {
+        status: "completed",
+        name: newName,
+        id: result.id,
+        path:
+          this.uploadPath === "/" ? newName : `${this.uploadPath}/${newName}`,
+      };
     } catch (error) {
-      console.error(`Error uploading chunk: ${(error as Error).message}`);
+      console.error("Error renaming file:", error);
       throw error;
     }
   }
 
-  private async uploadChunks(): Promise<void> {
-    this.uploadStartTime = Date.now();
-    while (this.bytesUploaded < this.fileSize) {
-      const chunkStart = this.bytesUploaded;
-      let chunkEnd = Math.min(chunkStart + this.chunkSize, this.fileSize);
+  cancel(): void {
+    this.isCancelled = true;
+  }
 
+  private async cancelUpload(): Promise<void> {
+    if (this.uploadUrl) {
       try {
-        const chunkStartTime = Date.now();
-        const response = await this.uploadChunkWithRetry(chunkStart, chunkEnd);
-        const chunkEndTime = Date.now();
-
-        this.bytesUploaded = chunkEnd;
-        this.emitProgress();
-
-        if (chunkEnd < this.fileSize) {
-          this.adjustChunkSize(
-            chunkEnd - chunkStart,
-            chunkEndTime - chunkStartTime,
-          );
-        } else {
-          console.log("Final chunk uploaded successfully.");
-          break;
-        }
-
-        // Check if we need to upload one more chunk
-        if (this.fileSize - this.bytesUploaded <= this.chunkSize) {
-          // Force one more iteration to upload the last chunk
-          this.chunkSize = this.fileSize - this.bytesUploaded;
-        }
+        await fetch(this.uploadUrl, { method: "DELETE" });
+        console.log(`Upload session cancelled for ${this.fileName}`);
       } catch (error) {
-        console.error(`Error uploading chunk: ${(error as Error).message}`);
-        throw error;
+        console.error(`Error cancelling upload session: ${error}`);
       }
     }
-
-    if (this.bytesUploaded === this.fileSize) {
-      console.log("Upload completed successfully.");
-    } else {
-      console.log(
-        `Upload incomplete. Uploaded ${this.bytesUploaded}/${this.fileSize} bytes.`,
-      );
-      throw new Error("Upload incomplete");
-    }
   }
 
-  private adjustChunkSize(bytesUploaded: number, uploadTime: number): void {
-    const uploadSpeedMBps = (bytesUploaded / uploadTime / 1024 / 1024) * 1000;
-
-    if (uploadSpeedMBps > 5) {
-      this.chunkSize = Math.min(this.chunkSize * 1.5, MAX_CHUNK_SIZE);
-    } else if (uploadSpeedMBps < 1) {
-      this.chunkSize = Math.max(this.chunkSize / 1.5, MIN_CHUNK_SIZE);
-    }
-  }
-
-  private async uploadChunkWithRetry(
-    start: number,
-    end: number,
-    retries: number = 3,
-  ): Promise<any> {
-    if (start === end) {
-      console.log("Skipping zero-byte chunk");
-      return; // Skip uploading zero-byte chunks
-    }
-
-    try {
-      return await this.uploadChunk(start, end);
-    } catch (error) {
-      if (retries > 0) {
-        const delay = Math.pow(2, 4 - retries) * 1000; // Exponential backoff
-        console.log(
-          `Retrying chunk upload in ${delay}ms. Retries left: ${retries - 1}`,
-        );
-        await new Promise((resolve) => setTimeout(resolve, delay));
-        return this.uploadChunkWithRetry(start, end, retries - 1);
+  private async readChunk(size: number): Promise<Buffer | null> {
+    return new Promise((resolve) => {
+      const chunk = (this.fileStream as any).read(size);
+      if (chunk === null) {
+        this.fileStream.once("readable", () => {
+          resolve(this.readChunk(size));
+        });
+        this.fileStream.once("end", () => {
+          resolve(null);
+        });
       } else {
-        throw error;
+        resolve(chunk);
       }
-    }
+    });
   }
 
   private emitProgress(): void {
     const now = Date.now();
-    if (now - this.lastProgressUpdate > 5000) {
-      // Update progress every 5 seconds
+    if (now - this.lastProgressUpdate > 1000) {
+      // Update progress every second
       const progress: UploadProgress = {
         bytesUploaded: this.bytesUploaded,
         totalBytes: this.fileSize,
@@ -214,85 +366,20 @@ export class UploadHandler extends EventEmitter {
       };
       this.emit("progress", progress);
       this.lastProgressUpdate = now;
-      console.log(`Upload progress: ${progress.percentage.toFixed(2)}%`);
     }
   }
 
-  private async readChunk(start: number, size: number): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-      const chunk = Buffer.alloc(size);
-      let bytesRead = 0;
-
-      const readNextChunk = () => {
-        const readSize = Math.min(size - bytesRead, 16384); // Read in 16KB chunks
-        const buffer = this.fileStream.read(readSize);
-
-        if (buffer) {
-          buffer.copy(chunk, bytesRead);
-          bytesRead += buffer.length;
-
-          if (bytesRead < size) {
-            readNextChunk();
-          } else {
-            resolve(chunk);
-          }
-        } else if (this.fileStream.readableEnded) {
-          // Stream has ended
-          if (bytesRead > 0) {
-            resolve(chunk.slice(0, bytesRead));
-          } else {
-            reject(new Error("Unexpected end of file"));
-          }
-        } else {
-          // Wait for more data
-          this.fileStream.once("readable", readNextChunk);
-        }
-      };
-
-      readNextChunk();
-    });
-  }
-
-  private async readEntireFile(): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-      const chunks: Buffer[] = [];
-      this.fileStream.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
-      this.fileStream.on("error", (err) => reject(err));
-      this.fileStream.on("end", () => resolve(Buffer.concat(chunks)));
-    });
-  }
-}
-
-export async function uploadToOneDrive(
-  accessToken: string,
-  fileStream: Readable,
-  fileName: string,
-  fileSize: number,
-  mimeType: string,
-  uploadPath: string,
-  onProgress?: (progress: UploadProgress) => void,
-): Promise<any> {
-  console.log(`Starting upload process for ${fileName} (${fileSize} bytes)`);
-  const uploader = new UploadHandler(
-    accessToken,
-    fileStream,
-    fileName,
-    fileSize,
-    mimeType,
-    uploadPath,
-  );
-
-  if (onProgress) {
-    uploader.on("progress", onProgress);
-  }
-
-  try {
-    const result = await uploader.upload();
-    console.log(`Upload completed for ${fileName}`);
-    return result;
-  } catch (error) {
-    console.error("Error in uploadToOneDrive:", error);
-    throw error;
+  private cleanup(): void {
+    if (
+      "destroy" in this.fileStream &&
+      typeof (this.fileStream as any).destroy === "function"
+    ) {
+      (this.fileStream as any).destroy();
+    }
+    this.removeAllListeners();
+    // @ts-ignore
+    this.client = null;
+    this.uploadedChunks.clear();
   }
 }
 
@@ -301,7 +388,9 @@ export async function checkFileExists(
   folderPath: string,
   fileName: string,
 ): Promise<boolean> {
-  const url = `https://graph.microsoft.com/v1.0/me/drive/root:${folderPath}/${fileName}`;
+  const path = folderPath === "/" ? fileName : `${folderPath}/${fileName}`;
+  console.log(`Checking if file exists: ${path}`);
+  const url = `https://graph.microsoft.com/v1.0/me/drive/root:/${path}`;
 
   try {
     const response = await fetch(url, {
@@ -312,14 +401,30 @@ export async function checkFileExists(
     });
 
     if (response.status === 200) {
+      console.log(`File exists: ${folderPath}/${fileName}`);
       return true; // File exists
     } else if (response.status === 404) {
+      console.log(`File does not exist: ${folderPath}/${fileName}`);
       return false; // File does not exist
     } else {
       throw new Error(`Unexpected response status: ${response.status}`);
     }
   } catch (error) {
     console.error("Error checking file existence:", error);
+
+    // Try to refresh the token
+    try {
+      const refreshResponse = await fetch("/api/refresh", { method: "GET" });
+      if (refreshResponse.ok) {
+        console.log("Token refreshed successfully");
+        return false;
+      } else {
+        console.error("Failed to refresh token");
+      }
+    } catch (refreshError) {
+      console.error("Error refreshing token:", refreshError);
+    }
+
     throw error;
   }
 }
