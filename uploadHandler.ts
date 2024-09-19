@@ -86,6 +86,7 @@ export class UploadHandler extends EventEmitter {
         headers: {
           "Content-Length": chunk.length.toString(),
           "Content-Range": contentRange,
+          "Content-Type": this.mimeType,
         },
         body: chunk,
       });
@@ -154,7 +155,6 @@ export class UploadHandler extends EventEmitter {
       await this.initializeUpload();
       const uploadStatus = await this.getUploadStatus();
       this.updateUploadedRanges(uploadStatus.nextExpectedRanges);
-      console.log(`Starting streaming upload for ${this.fileName}`);
       const uploadResult = await this.streamUpload();
 
       if (this.isCancelled) {
@@ -179,23 +179,6 @@ export class UploadHandler extends EventEmitter {
         }
       }
 
-      if (this.fileName.match(/^[_~]tmp\w{2}_/)) {
-        const newFileName = this.fileName.replace(/^[_~]tmp\w{2}_/, "");
-        console.log(
-          `Attempting to rename file from ${this.fileName} to ${newFileName}`,
-        );
-        if (result.id && result.id !== "unknown") {
-          result = await this.renameFile(result.id, newFileName);
-        } else {
-          console.warn("Unable to rename file: file ID is missing or unknown");
-          result.name = newFileName;
-          result.path =
-            this.uploadPath === "/"
-              ? newFileName
-              : `${this.uploadPath}/${newFileName}`;
-        }
-      }
-
       return result;
     } catch (error) {
       console.error("Error in upload process:", error);
@@ -206,7 +189,9 @@ export class UploadHandler extends EventEmitter {
   }
 
   private async streamUpload(): Promise<any> {
-    console.log(`Starting streaming upload for ${this.fileName}`);
+    console.log(
+      `Starting streaming upload for ${this.fileName} (${this.fileSize} bytes)`,
+    );
     const totalChunks = Math.ceil(this.fileSize / CHUNK_SIZE);
     let finalResponse;
 
@@ -291,37 +276,6 @@ export class UploadHandler extends EventEmitter {
       }
     }
     return null;
-  }
-
-  private async renameFile(itemId: string, newName: string): Promise<any> {
-    try {
-      const url = `https://graph.microsoft.com/v1.0/me/drive/items/${itemId}`;
-      const response = await fetch(url, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${this.accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ name: newName }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to rename file: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      console.log(`File renamed to: ${newName}`);
-      return {
-        status: "completed",
-        name: newName,
-        id: result.id,
-        path:
-          this.uploadPath === "/" ? newName : `${this.uploadPath}/${newName}`,
-      };
-    } catch (error) {
-      console.error("Error renaming file:", error);
-      throw error;
-    }
   }
 
   cancel(): void {

@@ -15,11 +15,9 @@
   "dependencies": {
     "@azure/msal-browser": "^3.23.0",
     "@azure/msal-react": "^2.0.22",
+    "@fastify/busboy": "^3.0.0",
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@prisma/client": "^5.19.1",
-    "@types/busboy": "^1.5.4",
-    "@types/cli-progress": "^3.11.6",
-    "busboy": "^1.6.0",
     "clsx": "^2.1.1",
     "express": "^4.21.0",
     "framer-motion": "^11.5.4",
