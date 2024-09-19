@@ -140,6 +140,11 @@ app.prepare().then(async () => {
                   `Upload completed: ${fileName} (${fileSize} bytes)\n`,
                 );
                 res.end(JSON.stringify({ ...result, fileSize }));
+
+                // Clean up the temporary file
+                fs.unlink(tempFilePath, (err) => {
+                  if (err) console.error("Error deleting temporary file:", err);
+                });
               } else if (result && result.status === "cancelled") {
                 res.write(`Upload cancelled for: ${fileName}\n`);
                 res.end(JSON.stringify({ ...result, fileSize }));
